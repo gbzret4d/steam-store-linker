@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Store Linker (Humble & Fanatical)
 // @namespace    http://tampermonkey.net/
-// @version      1.8
+// @version      1.9
 // @description  Adds Steam links and ownership status to Humble Bundle and Fanatical
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -168,21 +168,25 @@
         .ssl-container-owned {
             opacity: 1 !important;
             filter: grayscale(0%) !important;
-            border: 2px solid #4c6b22 !important;
-            box-shadow: inset 0 0 15px rgba(76, 107, 34, 0.6);
+            outline: 3px solid #4c6b22 !important; /* Use outline to avoid layout shifts */
+            box-shadow: inset 0 0 20px rgba(76, 107, 34, 0.6), 0 0 10px rgba(76, 107, 34, 0.5); /* Inner and outer glow */
             transition: all 0.2s;
+            z-index: 10; /* Ensure outline is valid */
         }
         .ssl-container-owned:hover {
-            box-shadow: inset 0 0 20px rgba(76, 107, 34, 0.8), 0 0 10px rgba(76, 107, 34, 0.4) !important;
+            box-shadow: inset 0 0 30px rgba(76, 107, 34, 0.9), 0 0 15px rgba(76, 107, 34, 0.7) !important;
         }
         .ssl-container-wishlist {
-            border: 2px solid #66c0f4 !important;
-            box-shadow: 0 0 10px rgba(102, 192, 244, 0.3) !important;
-            border-radius: 4px;
+            outline: 3px solid #66c0f4 !important;
+            box-shadow: inset 0 0 20px rgba(102, 192, 244, 0.4), 0 0 10px rgba(102, 192, 244, 0.5) !important;
+            border-radius: 4px; /* Optional, might conflict slightly with outline on some browsers but usually fine */
+            z-index: 10;
         }
         .ssl-container-ignored {
-            border: 2px solid #d9534f !important;
+            outline: 3px solid #d9534f !important;
+            box-shadow: inset 0 0 10px rgba(217, 83, 79, 0.4);
             opacity: 0.5;
+            z-index: 10;
         }
 
         #ssl-stats {
