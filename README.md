@@ -48,6 +48,12 @@ You can also manually update by clicking the installation link again or checking
     - **Steam Search**: Finds the correct Steam App ID by game name.
     - **Steam AppDetails**: Fetches secondary info like Trading Cards and DLC type.
     - **ProtonDB API**: Fetches the current Linux/Deck compatibility tier.
+
+## Credits
+
+- **[Revadike/SteamWebIntegration](https://github.com/Revadike/SteamWebIntegration)**: Inspiration for the "Asset Scanner" logic (detecting games via existing Steam images/links).
+- **Steam**: For providing the platform and data.
+- **SteamDB / ProtonDB**: For their excellent public APIs.
 - **Caching**: Results are cached in Tampermonkey storage to respect API rate limits and speed up subsequent page loads.
 
 ## Author

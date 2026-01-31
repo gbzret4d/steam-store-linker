@@ -1,9 +1,7 @@
 // ==UserScript==
 // @name         Steam Store Linker (Humble & Fanatical)
 // @namespace    http://tampermonkey.net/
-// @version      1.3
-// @updateURL    https://raw.githubusercontent.com/gbzret4d/steam-store-linker/main/steam_store_linker.user.js
-// @downloadURL  https://raw.githubusercontent.com/gbzret4d/steam-store-linker/main/steam_store_linker.user.js
+// @version      1.4
 
 // ... (skipping to searchSteamGame)
 
@@ -18,175 +16,197 @@ async function searchSteamGame(gameName) {
     return steamQueue.add(() => new Promise((resolve) => {
         GM_xmlhttpRequest({
             method: 'GET',
-            url: STEAM_SEARCH_API + encodeURIComponent(cleanedName),
+            // Add ignore_preferences=1 to bypass user content filters (adult/tags)
+            url: STEAM_SEARCH_API + encodeURIComponent(cleanedName) + '&ignore_preferences=1',
             onload: (response) => {
                 try {
                     const data = JSON.parse(response.responseText);
                     if (data.items && data.items.length > 0) {
+                        // @updateURL    https://raw.githubusercontent.com/gbzret4d/steam-store-linker/main/steam_store_linker.user.js
+                        // @downloadURL  https://raw.githubusercontent.com/gbzret4d/steam-store-linker/main/steam_store_linker.user.js
 
-                        // Helper to extract ID from logo if missing
-                        const extractId = (item) => {
-                            if (item.id) return { id: item.id, type: item.type || 'app' };
-                            if (item.logo) {
-                                const match = item.logo.match(/\/steam\/(apps|subs|bundles)\/(\d+)\//);
-                                if (match) {
-                                    let type = 'app';
-                                    if (match[1] === 'subs') type = 'sub';
-                                    if (match[1] === 'bundles') type = 'bundle';
-                                    return { id: parseInt(match[2]), type: type };
-                                }
-                            }
-                            return null;
-                        };
+                        // ... (skipping to searchSteamGame)
 
-                        let bestMatch = null;
-                        let maxScore = -1;
+                        async function searchSteamGame(gameName) {
+                            const cacheKey = 'steam_search_' + encodeURIComponent(gameName);
+                            const cached = getStoredValue(cacheKey, null);
+                            if (cached && (Date.now() - cached.timestamp < CACHE_TTL * 7)) return cached.data;
 
-                        data.items.forEach(item => {
-                            const info = extractId(item);
-                            if (!info) return;
+                            const cleanupRegex = /(:| -| –| —)?\s*(The\s+)?(Complete|Anthology|Collection|Definitive|Game of the Year|GOTY|Deluxe|Ultimate|Premium)(\s+(Edition|Cut|Content|Pack))?(\s+Bundle)?(\s*\.{3,})?/gi;
+                            const cleanedName = gameName.replace(cleanupRegex, '').trim().toLowerCase();
 
-                            const itemName = item.name.toLowerCase();
-                            const similarity = getSimilarity(cleanedName, itemName);
-                            let score = similarity;
+                            return steamQueue.add(() => new Promise((resolve) => {
+                                GM_xmlhttpRequest({
+                                    method: 'GET',
+                                    url: STEAM_SEARCH_API + encodeURIComponent(cleanedName),
+                                    onload: (response) => {
+                                        try {
+                                            const data = JSON.parse(response.responseText);
+                                            if (data.items && data.items.length > 0) {
 
-                            // Bonuses
-                            if (itemName === cleanedName) score += 0.5; // Exact match bonus
-                            if (itemName.startsWith(cleanedName)) score += 0.2; // Prefix bonus
+                                                // Helper to extract ID from logo if missing
+                                                const extractId = (item) => {
+                                                    if (item.id) return { id: item.id, type: item.type || 'app' };
+                                                    if (item.logo) {
+                                                        const match = item.logo.match(/\/steam\/(apps|subs|bundles)\/(\d+)\//);
+                                                        if (match) {
+                                                            let type = 'app';
+                                                            if (match[1] === 'subs') type = 'sub';
+                                                            if (match[1] === 'bundles') type = 'bundle';
+                                                            return { id: parseInt(match[2]), type: type };
+                                                        }
+                                                    }
+                                                    return null;
+                                                };
 
-                            // Penalties for type mismatch (unless requested)
-                            if (!cleanedName.includes('vr') && itemName.includes('vr')) score -= 0.5;
-                            if (!cleanedName.includes('soundtrack') && (itemName.includes('soundtrack') || itemName.includes('ost'))) score -= 0.5;
-                            if (!cleanedName.includes('demo') && itemName.includes('demo')) score -= 0.5;
-                            if (!cleanedName.includes('dlc') && itemName.includes('dlc')) score -= 0.3;
+                                                let bestMatch = null;
+                                                let maxScore = -1;
 
-                            if (score > maxScore) {
-                                maxScore = score;
-                                bestMatch = { ...item, ...info };
-                            }
-                        });
+                                                data.items.forEach(item => {
+                                                    const info = extractId(item);
+                                                    if (!info) return;
 
-                        if (!bestMatch || maxScore < 0.6) { // Threshold
-                            console.log(`[Steam Linker] No good match for "${cleanedName}". Best: "${bestMatch ? bestMatch.name : 'none'}" (Score: ${maxScore.toFixed(2)})`);
-                            setStoredValue(cacheKey, { data: null, timestamp: Date.now() });
-                            resolve(null);
-                            return;
+                                                    const itemName = item.name.toLowerCase();
+                                                    const similarity = getSimilarity(cleanedName, itemName);
+                                                    let score = similarity;
+
+                                                    // Bonuses
+                                                    if (itemName === cleanedName) score += 0.5; // Exact match bonus
+                                                    if (itemName.startsWith(cleanedName)) score += 0.2; // Prefix bonus
+
+                                                    // Penalties for type mismatch (unless requested)
+                                                    if (!cleanedName.includes('vr') && itemName.includes('vr')) score -= 0.5;
+                                                    if (!cleanedName.includes('soundtrack') && (itemName.includes('soundtrack') || itemName.includes('ost'))) score -= 0.5;
+                                                    if (!cleanedName.includes('demo') && itemName.includes('demo')) score -= 0.5;
+                                                    if (!cleanedName.includes('dlc') && itemName.includes('dlc')) score -= 0.3;
+
+                                                    if (score > maxScore) {
+                                                        maxScore = score;
+                                                        bestMatch = { ...item, ...info };
+                                                    }
+                                                });
+
+                                                if (!bestMatch || maxScore < 0.6) { // Threshold
+                                                    console.log(`[Steam Linker] No good match for "${cleanedName}". Best: "${bestMatch ? bestMatch.name : 'none'}" (Score: ${maxScore.toFixed(2)})`);
+                                                    setStoredValue(cacheKey, { data: null, timestamp: Date.now() });
+                                                    resolve(null);
+                                                    return;
+                                                }
+
+                                                const result = {
+                                                    id: bestMatch.id,
+                                                    type: bestMatch.type,
+                                                    name: bestMatch.name,
+                                                    tiny_image: bestMatch.tiny_image || bestMatch.logo,
+                                                    price: bestMatch.price ? (bestMatch.price.final / 100) + ' ' + bestMatch.price.currency : null,
+                                                    discount: bestMatch.price ? bestMatch.price.discount_percent : 0,
+                                                };
+                                                setStoredValue(cacheKey, { data: result, timestamp: Date.now() });
+                                                resolve(result);
+                                            } else {
+                                                setStoredValue(cacheKey, { data: null, timestamp: Date.now() });
+                                                resolve(null);
+                                            }
+                                        } catch (e) { resolve(null); }
+                                    },
+                                    onerror: () => resolve(null)
+                                });
+                            }));
                         }
 
-                        const result = {
-                            id: bestMatch.id,
-                            type: bestMatch.type,
-                            name: bestMatch.name,
-                            tiny_image: bestMatch.tiny_image || bestMatch.logo,
-                            price: bestMatch.price ? (bestMatch.price.final / 100) + ' ' + bestMatch.price.currency : null,
-                            discount: bestMatch.price ? bestMatch.price.discount_percent : 0,
-                        };
-                        setStoredValue(cacheKey, { data: result, timestamp: Date.now() });
-                        resolve(result);
-                    } else {
-                        setStoredValue(cacheKey, { data: null, timestamp: Date.now() });
-                        resolve(null);
-                    }
-                } catch (e) { resolve(null); }
-            },
-            onerror: () => resolve(null)
-        });
-    }));
-}
 
+                        // @description  Adds Steam links and ownership status to Humble Bundle and Fanatical
+                        // @author       gbzret4d
+                        // @match        https://www.humblebundle.com/*
+                        // @match        https://www.fanatical.com/*
+                        // @icon         https://store.steampowered.com/favicon.ico
+                        // @updateURL    https://raw.githubusercontent.com/gbzret4d/steam-store-linker/main/steam_store_linker.user.js
+                        // @downloadURL  https://raw.githubusercontent.com/gbzret4d/steam-store-linker/main/steam_store_linker.user.js
+                        // @homepageURL  https://github.com/gbzret4d/steam-store-linker
+                        // @connect      store.steampowered.com
+                        // @connect      www.protondb.com
+                        // @grant        GM_xmlhttpRequest
+                        // @grant        GM_setValue
+                        // @grant        GM_getValue
+                        // @grant        GM_addStyle
+                        // ==/UserScript==
 
-// @description  Adds Steam links and ownership status to Humble Bundle and Fanatical
-// @author       gbzret4d
-// @match        https://www.humblebundle.com/*
-// @match        https://www.fanatical.com/*
-// @icon         https://store.steampowered.com/favicon.ico
-// @updateURL    https://raw.githubusercontent.com/gbzret4d/steam-store-linker/main/steam_store_linker.user.js
-// @downloadURL  https://raw.githubusercontent.com/gbzret4d/steam-store-linker/main/steam_store_linker.user.js
-// @homepageURL  https://github.com/gbzret4d/steam-store-linker
-// @connect      store.steampowered.com
-// @connect      www.protondb.com
-// @grant        GM_xmlhttpRequest
-// @grant        GM_setValue
-// @grant        GM_getValue
-// @grant        GM_addStyle
-// ==/UserScript==
+                        (function () {
+                            'use strict';
 
-(function () {
-    'use strict';
+                            // --- Configuration ---
+                            const SITE_CONFIG = {
+                                'humblebundle.com': {
+                                    name: 'Humble Bundle',
+                                    ignoreUrl: '/books/',
+                                    selectors: [
+                                        { container: '.tier-item-view', title: '.item-title' },
+                                        { container: '.entity-block-container', title: '.entity-title' },
+                                        { container: '.entity-content', title: '.entity-title' },
+                                        { container: '.product-item', title: '.product-title' },
+                                        { container: '.content-choice', title: '.content-choice-title' },
+                                        { container: '.game-box', title: '.game-box-title' },
+                                        { container: '.pay-what-you-want-row', title: 'h2' },
+                                        { container: '.details-heading', title: 'h1' },
+                                        { container: '.product-header', title: 'h1' },
+                                        { container: '.product-hero', title: 'h1' },
+                                        { container: '[class*="product-detail"]', title: 'h1' }
+                                    ],
+                                    isValidGameElement: (element, nameEl) => {
+                                        const link = element.closest('a') || element.querySelector('a');
+                                        if (link && link.href) {
+                                            if (link.href.includes('/store/search') || link.href.includes('/store/promo')) {
+                                                return false;
+                                            }
+                                        }
+                                        const text = nameEl.textContent.trim().toLowerCase();
+                                        const blocklist = ['deals under', 'great on', 'browse by', 'top selling', 'new on humble', 'coming soon'];
+                                        if (blocklist.some(term => text.includes(term))) return false;
+                                        return true;
+                                    }
+                                },
+                                'fanatical.com': {
+                                    name: 'Fanatical',
+                                    selectors: [
+                                        { container: '.HitCard', title: '.hitCardStripe__seoName' },
+                                        { container: '.PickAndMixCard', title: '.card-product-name' },
+                                        { container: '.product-det', title: 'h1.product-name' },
+                                        { container: '.product-container', title: 'h1.product-name' },
+                                        { container: 'div[class*="ProductDetail"]', title: 'h1.product-name' },
+                                        { container: '.name-banner-container', title: 'h1.product-name' }
+                                    ],
+                                    ignoreUrl: null
+                                },
 
-    // --- Configuration ---
-    const SITE_CONFIG = {
-        'humblebundle.com': {
-            name: 'Humble Bundle',
-            ignoreUrl: '/books/',
-            selectors: [
-                { container: '.tier-item-view', title: '.item-title' },
-                { container: '.entity-block-container', title: '.entity-title' },
-                { container: '.entity-content', title: '.entity-title' },
-                { container: '.product-item', title: '.product-title' },
-                { container: '.content-choice', title: '.content-choice-title' },
-                { container: '.game-box', title: '.game-box-title' },
-                { container: '.pay-what-you-want-row', title: 'h2' },
-                { container: '.details-heading', title: 'h1' },
-                { container: '.product-header', title: 'h1' },
-                { container: '.product-hero', title: 'h1' },
-                { container: '[class*="product-detail"]', title: 'h1' }
-            ],
-            isValidGameElement: (element, nameEl) => {
-                const link = element.closest('a') || element.querySelector('a');
-                if (link && link.href) {
-                    if (link.href.includes('/store/search') || link.href.includes('/store/promo')) {
-                        return false;
-                    }
-                }
-                const text = nameEl.textContent.trim().toLowerCase();
-                const blocklist = ['deals under', 'great on', 'browse by', 'top selling', 'new on humble', 'coming soon'];
-                if (blocklist.some(term => text.includes(term))) return false;
-                return true;
-            }
-        },
-        'fanatical.com': {
-            name: 'Fanatical',
-            selectors: [
-                { container: '.HitCard', title: '.hitCardStripe__seoName' },
-                { container: '.PickAndMixCard', title: '.card-product-name' },
-                { container: '.product-det', title: 'h1.product-name' },
-                { container: '.product-container', title: 'h1.product-name' },
-                { container: 'div[class*="ProductDetail"]', title: 'h1.product-name' },
-                { container: '.name-banner-container', title: 'h1.product-name' }
-            ],
-            ignoreUrl: null
-        },
+                            };
 
-    };
+                            function getCurrentSiteConfig() {
+                                const hostname = window.location.hostname;
+                                for (const domain in SITE_CONFIG) {
+                                    if (hostname.includes(domain)) return SITE_CONFIG[domain];
+                                }
+                                return null;
+                            }
 
-    function getCurrentSiteConfig() {
-        const hostname = window.location.hostname;
-        for (const domain in SITE_CONFIG) {
-            if (hostname.includes(domain)) return SITE_CONFIG[domain];
-        }
-        return null;
-    }
+                            const currentConfig = getCurrentSiteConfig();
+                            if (!currentConfig) {
+                                console.log('[Steam Linker] Site not supported');
+                                return;
+                            }
 
-    const currentConfig = getCurrentSiteConfig();
-    if (!currentConfig) {
-        console.log('[Steam Linker] Site not supported');
-        return;
-    }
+                            if (currentConfig.ignoreUrl && window.location.href.includes(currentConfig.ignoreUrl)) {
+                                console.log(`[Steam Linker] Ignoring URL pattern: ${currentConfig.ignoreUrl}`);
+                                return;
+                            }
 
-    if (currentConfig.ignoreUrl && window.location.href.includes(currentConfig.ignoreUrl)) {
-        console.log(`[Steam Linker] Ignoring URL pattern: ${currentConfig.ignoreUrl}`);
-        return;
-    }
+                            // --- API & Constants ---
+                            const STEAM_USERDATA_API = 'https://store.steampowered.com/dynamicstore/userdata/';
+                            const STEAM_SEARCH_API = 'https://store.steampowered.com/search/results/?json=1&term=';
+                            const PROTONDB_API = 'https://www.protondb.com/api/v1/reports/summaries/';
+                            const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
-    // --- API & Constants ---
-    const STEAM_USERDATA_API = 'https://store.steampowered.com/dynamicstore/userdata/';
-    const STEAM_SEARCH_API = 'https://store.steampowered.com/search/results/?json=1&term=';
-    const PROTONDB_API = 'https://www.protondb.com/api/v1/reports/summaries/';
-    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-
-    // Styles
-    const css = `
+                            // Styles
+                            const css = `
         .ssl-link {
             display: inline-block;
             margin-top: 5px;
@@ -245,139 +265,263 @@ async function searchSteamGame(gameName) {
         #ssl-stats div { display: flex; justify-content: space-between; margin-bottom: 2px; }
         #ssl-stats span.val { font-weight: bold; color: #fff; margin-left: 10px; }
     `;
-    GM_addStyle(css);
+                            GM_addStyle(css);
 
-    // --- State & UI ---
-    const stats = { total: 0, owned: 0, wishlist: 0, ignored: 0, missing: 0 };
+                            // --- State & UI ---
+                            const stats = { total: 0, owned: 0, wishlist: 0, ignored: 0, missing: 0 };
 
-    function updateStatsUI() {
-        let panel = document.getElementById('ssl-stats');
-        if (!panel) {
-            panel = document.createElement('div');
-            panel.id = 'ssl-stats';
-            document.body.appendChild(panel);
-            window.addEventListener('beforeprint', () => { panel.style.display = 'none'; });
-            window.addEventListener('afterprint', () => { panel.style.display = 'block'; });
-        }
+                            function updateStatsUI() {
+                                let panel = document.getElementById('ssl-stats');
+                                if (!panel) {
+                                    panel = document.createElement('div');
+                                    panel.id = 'ssl-stats';
+                                    document.body.appendChild(panel);
+                                    window.addEventListener('beforeprint', () => { panel.style.display = 'none'; });
+                                    window.addEventListener('afterprint', () => { panel.style.display = 'block'; });
+                                }
 
-        let html = `<h4>${currentConfig.name} Stats</h4>`;
-        const lines = [
-            { label: 'Total', val: stats.total },
-            { label: 'Owned', val: stats.owned },
-            { label: 'Wishlist', val: stats.wishlist },
-            { label: 'Ignored', val: stats.ignored },
-            { label: 'Missing', val: stats.missing }
-        ];
-        lines.forEach(l => { html += `<div>${l.label}: <span class="val">${l.val}</span></div>`; });
-        panel.innerHTML = html;
-    }
+                                let html = `<h4>${currentConfig.name} Stats</h4>`;
+                                const lines = [
+                                    { label: 'Total', val: stats.total },
+                                    { label: 'Owned', val: stats.owned },
+                                    { label: 'Wishlist', val: stats.wishlist },
+                                    { label: 'Ignored', val: stats.ignored },
+                                    { label: 'Missing', val: stats.missing }
+                                ];
+                                lines.forEach(l => { html += `<div>${l.label}: <span class="val">${l.val}</span></div>`; });
+                                panel.innerHTML = html;
+                            }
 
-    function createSteamLink(appData) {
-        if (!appData || !appData.id) return document.createElement('span');
+                            function createSteamLink(appData) {
+                                if (!appData || !appData.id) return document.createElement('span');
 
-        const link = document.createElement('a');
-        link.className = 'ssl-link';
+                                const link = document.createElement('a');
+                                link.className = 'ssl-link';
 
-        let typePath = 'app';
-        if (appData.type === 'sub') typePath = 'sub';
-        if (appData.type === 'bundle') typePath = 'bundle';
+                                let typePath = 'app';
+                                if (appData.type === 'sub') typePath = 'sub';
+                                if (appData.type === 'bundle') typePath = 'bundle';
 
-        link.href = `https://store.steampowered.com/${typePath}/${appData.id}/`;
-        link.target = '_blank';
-        link.title = appData.name;
+                                link.href = `https://store.steampowered.com/${typePath}/${appData.id}/`;
+                                link.target = '_blank';
+                                link.title = appData.name;
 
-        let html = `<span>STEAM</span>`;
-        if (appData.cards) html += `<span>CARDS</span>`;
-        if (appData.owned) html += `<span class="ssl-owned">OWNED</span>`;
-        else if (appData.wishlisted) html += `<span class="ssl-wishlist">WISHLIST</span>`;
-        if (appData.ignored) html += `<span class="ssl-ignored">IGNORED</span>`;
-        if (appData.proton) html += `<span>${appData.proton} PROTON</span>`;
+                                let html = `<span>STEAM</span>`;
+                                if (appData.cards) html += `<span>CARDS</span>`;
+                                if (appData.owned) html += `<span class="ssl-owned">OWNED</span>`;
+                                else if (appData.wishlisted) html += `<span class="ssl-wishlist">WISHLIST</span>`;
+                                if (appData.ignored) html += `<span class="ssl-ignored">IGNORED</span>`;
+                                if (appData.proton) html += `<span>${appData.proton} PROTON</span>`;
 
-        link.innerHTML = html;
-        return link;
-    }
+                                link.innerHTML = html;
+                                return link;
+                            }
 
-    // --- Helpers ---
-    class RequestQueue {
-        constructor(interval) {
-            this.interval = interval;
-            this.queue = [];
-            this.running = false;
-        }
-        add(fn) {
-            return new Promise((resolve, reject) => {
-                this.queue.push({ fn, resolve, reject });
-                this.process();
-            });
-        }
-        async process() {
-            if (this.running || this.queue.length === 0) return;
-            this.running = true;
-            while (this.queue.length > 0) {
-                const { fn, resolve, reject } = this.queue.shift();
-                try { resolve(await fn()); } catch (e) { reject(e); }
-                await new Promise(r => setTimeout(r, this.interval));
-            }
-            this.running = false;
-        }
-    }
-    const steamQueue = new RequestQueue(300);
+                            // --- Helpers ---
+                            class RequestQueue {
+                                constructor(interval) {
+                                    this.interval = interval;
+                                    this.queue = [];
+                                    this.running = false;
+                                }
+                                add(fn) {
+                                    return new Promise((resolve, reject) => {
+                                        this.queue.push({ fn, resolve, reject });
+                                        this.process();
+                                    });
+                                }
+                                async process() {
+                                    if (this.running || this.queue.length === 0) return;
+                                    this.running = true;
+                                    while (this.queue.length > 0) {
+                                        const { fn, resolve, reject } = this.queue.shift();
+                                        try { resolve(await fn()); } catch (e) { reject(e); }
+                                        await new Promise(r => setTimeout(r, this.interval));
+                                    }
+                                    this.running = false;
+                                }
+                            }
+                            const steamQueue = new RequestQueue(300);
 
-    function getStoredValue(key, defaultVal) {
-        try { return GM_getValue(key, defaultVal); } catch (e) { return defaultVal; }
-    }
-    function setStoredValue(key, val) {
-        try { GM_setValue(key, val); } catch (e) { }
-    }
+                            function getStoredValue(key, defaultVal) {
+                                try { return GM_getValue(key, defaultVal); } catch (e) { return defaultVal; }
+                            }
+                            function setStoredValue(key, val) {
+                                try { GM_setValue(key, val); } catch (e) { }
+                            }
 
-    // --- API Calls ---
-    async function fetchSteamUserData() {
-        const cached = getStoredValue('steam_userdata', null);
-        if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) return cached.data;
+                            // --- API Calls ---
+                            async function fetchSteamUserData() {
+                                const cached = getStoredValue('steam_userdata', null);
+                                if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) return cached.data;
 
-        return steamQueue.add(() => new Promise((resolve) => {
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: STEAM_USERDATA_API,
-                onload: (response) => {
-                    try {
-                        const data = JSON.parse(response.responseText);
-                        const userData = {
-                            ownedApps: data.rgOwnedApps || [],
-                            wishlist: data.rgWishlist || [],
-                            ignored: data.rgIgnoredApps || {}
-                        };
-                        setStoredValue('steam_userdata', { data: userData, timestamp: Date.now() });
-                        resolve(userData);
-                    } catch (e) { resolve({ ownedApps: [], wishlist: [], ignored: {} }); }
-                },
-                onerror: () => resolve({ ownedApps: [], wishlist: [], ignored: {} })
-            });
-        }));
-    }
+                                return steamQueue.add(() => new Promise((resolve) => {
+                                    GM_xmlhttpRequest({
+                                        method: 'GET',
+                                        url: STEAM_USERDATA_API,
+                                        onload: (response) => {
+                                            try {
+                                                const data = JSON.parse(response.responseText);
+                                                const userData = {
+                                                    ownedApps: data.rgOwnedApps || [],
+                                                    wishlist: data.rgWishlist || [],
+                                                    ignored: data.rgIgnoredApps || {}
+                                                };
+                                                setStoredValue('steam_userdata', { data: userData, timestamp: Date.now() });
+                                                resolve(userData);
+                                            } catch (e) { resolve({ ownedApps: [], wishlist: [], ignored: {} }); }
+                                        },
+                                        onerror: () => resolve({ ownedApps: [], wishlist: [], ignored: {} })
+                                    });
+                                }));
+                            }
 
-    async function searchSteamGame(gameName) {
-        const cacheKey = 'steam_search_' + encodeURIComponent(gameName);
-        const cached = getStoredValue(cacheKey, null);
-        if (cached && (Date.now() - cached.timestamp < CACHE_TTL * 7)) return cached.data;
+                            async function searchSteamGame(gameName) {
+                                const cacheKey = 'steam_search_' + encodeURIComponent(gameName);
+                                const cached = getStoredValue(cacheKey, null);
+                                if (cached && (Date.now() - cached.timestamp < CACHE_TTL * 7)) return cached.data;
 
-        const cleanupRegex = /(:| -| –| —)?\s*(The\s+)?(Complete|Anthology|Collection|Definitive|Game of the Year|GOTY|Deluxe|Ultimate|Premium)(\s+(Edition|Cut|Content|Pack))?(\s+Bundle)?(\s*\.{3,})?/gi;
-        const cleanedName = gameName.replace(cleanupRegex, '').trim();
+                                const cleanupRegex = /(:| -| –| —)?\s*(The\s+)?(Complete|Anthology|Collection|Definitive|Game of the Year|GOTY|Deluxe|Ultimate|Premium)(\s+(Edition|Cut|Content|Pack))?(\s+Bundle)?(\s*\.{3,})?/gi;
+                                const cleanedName = gameName.replace(cleanupRegex, '').trim();
 
-        return steamQueue.add(() => new Promise((resolve) => {
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: STEAM_SEARCH_API + encodeURIComponent(cleanedName),
-                onload: (response) => {
-                    try {
-                        const data = JSON.parse(response.responseText);
-                        if (data.items && data.items.length > 0) {
+                                return steamQueue.add(() => new Promise((resolve) => {
+                                    GM_xmlhttpRequest({
+                                        method: 'GET',
+                                        url: STEAM_SEARCH_API + encodeURIComponent(cleanedName),
+                                        onload: (response) => {
+                                            try {
+                                                const data = JSON.parse(response.responseText);
+                                                if (data.items && data.items.length > 0) {
 
-                            // Helper to extract ID from logo if missing
-                            const extractId = (item) => {
-                                if (item.id) return { id: item.id, type: item.type || 'app' };
-                                if (item.logo) {
-                                    const match = item.logo.match(/\/steam\/(apps|subs|bundles)\/(\d+)\//);
+                                                    // Helper to extract ID from logo if missing
+                                                    const extractId = (item) => {
+                                                        if (item.id) return { id: item.id, type: item.type || 'app' };
+                                                        if (item.logo) {
+                                                            const match = item.logo.match(/\/steam\/(apps|subs|bundles)\/(\d+)\//);
+                                                            if (match) {
+                                                                let type = 'app';
+                                                                if (match[1] === 'subs') type = 'sub';
+                                                                if (match[1] === 'bundles') type = 'bundle';
+                                                                return { id: parseInt(match[2]), type: type };
+                                                            }
+                                                        }
+                                                        return null;
+                                                    };
+
+                                                    let bestMatch = data.items[0];
+                                                    let bestInfo = extractId(bestMatch);
+
+                                                    const exact = data.items.find(i => i.name.toLowerCase() === cleanedName.toLowerCase());
+                                                    if (exact) {
+                                                        const exactInfo = extractId(exact);
+                                                        if (exactInfo) {
+                                                            bestMatch = exact;
+                                                            bestInfo = exactInfo;
+                                                        }
+                                                    }
+
+                                                    if (!bestInfo) {
+                                                        resolve(null);
+                                                        return;
+                                                    }
+
+                                                    // Fuzzy Match Check
+                                                    const similarity = getSimilarity(cleanedName, bestMatch.name);
+                                                    if (similarity < 0.7) {
+                                                        console.log(`[Steam Linker] Low similarity (${(similarity * 100).toFixed(0)}%) for "${cleanedName}" -> "${bestMatch.name}". Ignoring.`);
+                                                        setStoredValue(cacheKey, { data: null, timestamp: Date.now() });
+                                                        resolve(null);
+                                                        return;
+                                                    }
+
+                                                    const result = {
+                                                        id: bestInfo.id,
+                                                        type: bestInfo.type,
+                                                        name: bestMatch.name,
+                                                        tiny_image: bestMatch.tiny_image || bestMatch.logo,
+                                                        price: bestMatch.price ? (bestMatch.price.final / 100) + ' ' + bestMatch.price.currency : null,
+                                                        discount: bestMatch.price ? bestMatch.price.discount_percent : 0,
+                                                    };
+                                                    setStoredValue(cacheKey, { data: result, timestamp: Date.now() });
+                                                    resolve(result);
+                                                } else {
+                                                    setStoredValue(cacheKey, { data: null, timestamp: Date.now() });
+                                                    resolve(null);
+                                                }
+                                            } catch (e) { resolve(null); }
+                                        },
+                                        onerror: () => resolve(null)
+                                    });
+                                }));
+                            }
+
+                            // --- Levenshtein Similarity Helper ---
+                            function getSimilarity(s1, s2) {
+                                const longer = s1.length > s2.length ? s1 : s2;
+                                const shorter = s1.length > s2.length ? s2 : s1;
+                                const longerLength = longer.length;
+                                if (longerLength === 0) return 1.0;
+                                return (longerLength - editDistance(longer.toLowerCase(), shorter.toLowerCase())) / longerLength;
+                            }
+
+                            function editDistance(s1, s2) {
+                                s1 = s1.toLowerCase();
+                                s2 = s2.toLowerCase();
+                                const costs = new Array();
+                                for (let i = 0; i <= s1.length; i++) {
+                                    let lastValue = i;
+                                    for (let j = 0; j <= s2.length; j++) {
+                                        if (i == 0) costs[j] = j;
+                                        else {
+                                            if (j > 0) {
+                                                let newValue = costs[j - 1];
+                                                if (s1.charAt(i - 1) != s2.charAt(j - 1)) newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+                                                costs[j - 1] = lastValue;
+                                                lastValue = newValue;
+                                            }
+                                        }
+                                    }
+                                    if (i > 0) costs[s2.length] = lastValue;
+                                }
+                                return costs[s2.length];
+                            }
+
+                            async function fetchProtonDB(appId) {
+                                const cacheKey = 'proton_' + appId;
+                                const cached = getStoredValue(cacheKey, null);
+                                if (cached && (Date.now() - cached.timestamp < CACHE_TTL * 7)) return cached.data;
+
+                                return new Promise(resolve => {
+                                    GM_xmlhttpRequest({
+                                        method: 'GET',
+                                        url: PROTONDB_API + appId,
+                                        onload: res => {
+                                            try {
+                                                const data = JSON.parse(res.responseText);
+                                                const tier = data.trendingTier || data.tier;
+                                                setStoredValue(cacheKey, { data: tier, timestamp: Date.now() });
+                                                resolve(tier);
+                                            } catch (e) { resolve(null); }
+                                        },
+                                        onerror: () => resolve(null)
+                                    });
+                                });
+                            }
+
+                            function scanForSteamAssets(element) {
+                                // 1. Check Links
+                                const links = element.querySelectorAll('a[href*="/app/"], a[href*="/sub/"], a[href*="/bundle/"]');
+                                for (const link of links) {
+                                    const match = link.href.match(/\/(app|sub|bundle)\/(\d+)/i);
+                                    if (match) {
+                                        return { id: parseInt(match[2]), type: match[1].toLowerCase() };
+                                    }
+                                }
+
+                                // 2. Check Images
+                                const images = element.querySelectorAll('img[src*="/apps/"], img[src*="/subs/"], img[src*="/bundles/"]');
+                                for (const img of images) {
+                                    const match = img.src.match(/\/(apps|subs|bundles)\/(\d+)/i);
                                     if (match) {
                                         let type = 'app';
                                         if (match[1] === 'subs') type = 'sub';
@@ -386,234 +530,110 @@ async function searchSteamGame(gameName) {
                                     }
                                 }
                                 return null;
-                            };
+                            }
 
-                            let bestMatch = data.items[0];
-                            let bestInfo = extractId(bestMatch);
+                            // --- Processing ---
+                            let userDataPromise = fetchSteamUserData();
 
-                            const exact = data.items.find(i => i.name.toLowerCase() === cleanedName.toLowerCase());
-                            if (exact) {
-                                const exactInfo = extractId(exact);
-                                if (exactInfo) {
-                                    bestMatch = exact;
-                                    bestInfo = exactInfo;
+                            async function processGameElement(element, nameSelector) {
+                                if (element.dataset.sslProcessed) return;
+
+                                const nameEl = element.querySelector(nameSelector);
+                                if (!nameEl) return;
+
+                                // Custom Validator
+                                if (currentConfig.isValidGameElement) {
+                                    if (!currentConfig.isValidGameElement(element, nameEl)) {
+                                        element.dataset.sslProcessed = "ignored";
+                                        return;
+                                    }
+                                }
+
+                                if (element.dataset.sslProcessed) return;
+                                element.dataset.sslProcessed = "pending";
+
+                                const gameName = nameEl.textContent.trim();
+                                if (!gameName) return;
+
+                                stats.total++;
+                                updateStatsUI();
+
+                                try {
+                                    // 1. Asset Scan (Priority)
+                                    let result = null;
+                                    const assetMatch = scanForSteamAssets(element);
+
+                                    if (assetMatch) {
+                                        result = {
+                                            id: assetMatch.id,
+                                            type: assetMatch.type,
+                                            name: gameName, // Trust the page name
+                                            tiny_image: null,
+                                            price: null,
+                                            discount: 0
+                                        };
+                                        console.log(`[Steam Linker] Asset match for "${gameName}": ${assetMatch.type}/${assetMatch.id}`);
+                                    } else {
+                                        // 2. Steam Search (Fallback)
+                                        result = await searchSteamGame(gameName);
+                                    }
+
+                                    if (result) {
+                                        const userData = await userDataPromise;
+                                        const owned = userData.ownedApps.includes(result.id);
+                                        // Simple wishlist check for ID presence
+                                        const wishlisted = userData.wishlist.some(w => (w.appid === result.id || w === result.id));
+                                        const ignored = userData.ignored && userData.ignored[result.id];
+                                        const proton = await fetchProtonDB(result.id);
+
+                                        const appData = { ...result, owned, wishlisted, ignored, proton };
+
+                                        if (owned) {
+                                            stats.owned++;
+                                            element.classList.add('ssl-container-owned');
+                                        } else if (wishlisted) {
+                                            stats.wishlist++;
+                                            element.classList.add('ssl-container-wishlist');
+                                        } else if (ignored) {
+                                            stats.ignored++;
+                                            element.classList.add('ssl-container-ignored');
+                                        } else {
+                                            stats.missing++;
+                                        }
+                                        updateStatsUI();
+
+                                        const link = createSteamLink(appData);
+                                        nameEl.after(link);
+                                        element.dataset.sslProcessed = "true";
+                                    } else {
+                                        element.dataset.sslProcessed = "notfound";
+                                    }
+                                } catch (e) {
+                                    console.error(e);
+                                    element.dataset.sslProcessed = "error";
                                 }
                             }
 
-                            if (!bestInfo) {
-                                resolve(null);
-                                return;
+                            function scanPage() {
+                                if (!currentConfig.selectors) return;
+                                currentConfig.selectors.forEach(strat => {
+                                    document.querySelectorAll(strat.container).forEach(el => {
+                                        processGameElement(el, strat.title);
+                                    });
+                                });
                             }
 
-                            // Fuzzy Match Check
-                            const similarity = getSimilarity(cleanedName, bestMatch.name);
-                            if (similarity < 0.7) {
-                                console.log(`[Steam Linker] Low similarity (${(similarity * 100).toFixed(0)}%) for "${cleanedName}" -> "${bestMatch.name}". Ignoring.`);
-                                setStoredValue(cacheKey, { data: null, timestamp: Date.now() });
-                                resolve(null);
-                                return;
-                            }
+                            // --- Observer ---
+                            const observer = new MutationObserver((mutations) => {
+                                let shouldScan = false;
+                                mutations.forEach(m => { if (m.addedNodes.length > 0) shouldScan = true; });
+                                if (shouldScan) {
+                                    if (window.sslScanTimeout) clearTimeout(window.sslScanTimeout);
+                                    window.sslScanTimeout = setTimeout(scanPage, 500);
+                                }
+                            });
 
-                            const result = {
-                                id: bestInfo.id,
-                                type: bestInfo.type,
-                                name: bestMatch.name,
-                                tiny_image: bestMatch.tiny_image || bestMatch.logo,
-                                price: bestMatch.price ? (bestMatch.price.final / 100) + ' ' + bestMatch.price.currency : null,
-                                discount: bestMatch.price ? bestMatch.price.discount_percent : 0,
-                            };
-                            setStoredValue(cacheKey, { data: result, timestamp: Date.now() });
-                            resolve(result);
-                        } else {
-                            setStoredValue(cacheKey, { data: null, timestamp: Date.now() });
-                            resolve(null);
-                        }
-                    } catch (e) { resolve(null); }
-                },
-                onerror: () => resolve(null)
-            });
-        }));
-    }
+                            observer.observe(document.body, { childList: true, subtree: true });
+                            setTimeout(scanPage, 1000);
 
-    // --- Levenshtein Similarity Helper ---
-    function getSimilarity(s1, s2) {
-        const longer = s1.length > s2.length ? s1 : s2;
-        const shorter = s1.length > s2.length ? s2 : s1;
-        const longerLength = longer.length;
-        if (longerLength === 0) return 1.0;
-        return (longerLength - editDistance(longer.toLowerCase(), shorter.toLowerCase())) / longerLength;
-    }
-
-    function editDistance(s1, s2) {
-        s1 = s1.toLowerCase();
-        s2 = s2.toLowerCase();
-        const costs = new Array();
-        for (let i = 0; i <= s1.length; i++) {
-            let lastValue = i;
-            for (let j = 0; j <= s2.length; j++) {
-                if (i == 0) costs[j] = j;
-                else {
-                    if (j > 0) {
-                        let newValue = costs[j - 1];
-                        if (s1.charAt(i - 1) != s2.charAt(j - 1)) newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
-                        costs[j - 1] = lastValue;
-                        lastValue = newValue;
-                    }
-                }
-            }
-            if (i > 0) costs[s2.length] = lastValue;
-        }
-        return costs[s2.length];
-    }
-
-    async function fetchProtonDB(appId) {
-        const cacheKey = 'proton_' + appId;
-        const cached = getStoredValue(cacheKey, null);
-        if (cached && (Date.now() - cached.timestamp < CACHE_TTL * 7)) return cached.data;
-
-        return new Promise(resolve => {
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: PROTONDB_API + appId,
-                onload: res => {
-                    try {
-                        const data = JSON.parse(res.responseText);
-                        const tier = data.trendingTier || data.tier;
-                        setStoredValue(cacheKey, { data: tier, timestamp: Date.now() });
-                        resolve(tier);
-                    } catch (e) { resolve(null); }
-                },
-                onerror: () => resolve(null)
-            });
-        });
-    }
-
-    function scanForSteamAssets(element) {
-        // 1. Check Links
-        const links = element.querySelectorAll('a[href*="/app/"], a[href*="/sub/"], a[href*="/bundle/"]');
-        for (const link of links) {
-            const match = link.href.match(/\/(app|sub|bundle)\/(\d+)/i);
-            if (match) {
-                return { id: parseInt(match[2]), type: match[1].toLowerCase() };
-            }
-        }
-
-        // 2. Check Images
-        const images = element.querySelectorAll('img[src*="/apps/"], img[src*="/subs/"], img[src*="/bundles/"]');
-        for (const img of images) {
-            const match = img.src.match(/\/(apps|subs|bundles)\/(\d+)/i);
-            if (match) {
-                let type = 'app';
-                if (match[1] === 'subs') type = 'sub';
-                if (match[1] === 'bundles') type = 'bundle';
-                return { id: parseInt(match[2]), type: type };
-            }
-        }
-        return null;
-    }
-
-    // --- Processing ---
-    let userDataPromise = fetchSteamUserData();
-
-    async function processGameElement(element, nameSelector) {
-        if (element.dataset.sslProcessed) return;
-
-        const nameEl = element.querySelector(nameSelector);
-        if (!nameEl) return;
-
-        // Custom Validator
-        if (currentConfig.isValidGameElement) {
-            if (!currentConfig.isValidGameElement(element, nameEl)) {
-                element.dataset.sslProcessed = "ignored";
-                return;
-            }
-        }
-
-        if (element.dataset.sslProcessed) return;
-        element.dataset.sslProcessed = "pending";
-
-        const gameName = nameEl.textContent.trim();
-        if (!gameName) return;
-
-        stats.total++;
-        updateStatsUI();
-
-        try {
-            // 1. Asset Scan (Priority)
-            let result = null;
-            const assetMatch = scanForSteamAssets(element);
-
-            if (assetMatch) {
-                result = {
-                    id: assetMatch.id,
-                    type: assetMatch.type,
-                    name: gameName, // Trust the page name
-                    tiny_image: null,
-                    price: null,
-                    discount: 0
-                };
-                console.log(`[Steam Linker] Asset match for "${gameName}": ${assetMatch.type}/${assetMatch.id}`);
-            } else {
-                // 2. Steam Search (Fallback)
-                result = await searchSteamGame(gameName);
-            }
-
-            if (result) {
-                const userData = await userDataPromise;
-                const owned = userData.ownedApps.includes(result.id);
-                // Simple wishlist check for ID presence
-                const wishlisted = userData.wishlist.some(w => (w.appid === result.id || w === result.id));
-                const ignored = userData.ignored && userData.ignored[result.id];
-                const proton = await fetchProtonDB(result.id);
-
-                const appData = { ...result, owned, wishlisted, ignored, proton };
-
-                if (owned) {
-                    stats.owned++;
-                    element.classList.add('ssl-container-owned');
-                } else if (wishlisted) {
-                    stats.wishlist++;
-                    element.classList.add('ssl-container-wishlist');
-                } else if (ignored) {
-                    stats.ignored++;
-                    element.classList.add('ssl-container-ignored');
-                } else {
-                    stats.missing++;
-                }
-                updateStatsUI();
-
-                const link = createSteamLink(appData);
-                nameEl.after(link);
-                element.dataset.sslProcessed = "true";
-            } else {
-                element.dataset.sslProcessed = "notfound";
-            }
-        } catch (e) {
-            console.error(e);
-            element.dataset.sslProcessed = "error";
-        }
-    }
-
-    function scanPage() {
-        if (!currentConfig.selectors) return;
-        currentConfig.selectors.forEach(strat => {
-            document.querySelectorAll(strat.container).forEach(el => {
-                processGameElement(el, strat.title);
-            });
-        });
-    }
-
-    // --- Observer ---
-    const observer = new MutationObserver((mutations) => {
-        let shouldScan = false;
-        mutations.forEach(m => { if (m.addedNodes.length > 0) shouldScan = true; });
-        if (shouldScan) {
-            if (window.sslScanTimeout) clearTimeout(window.sslScanTimeout);
-            window.sslScanTimeout = setTimeout(scanPage, 500);
-        }
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
-    setTimeout(scanPage, 1000);
-
-})();
+                        })();
