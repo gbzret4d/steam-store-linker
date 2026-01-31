@@ -1,7 +1,9 @@
 // ==UserScript==
 // @name         Steam Store Linker (Humble & Fanatical)
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
+
+
 // @description  Adds Steam links and ownership status to Humble Bundle and Fanatical
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -184,7 +186,12 @@
 
         const link = document.createElement('a');
         link.className = 'ssl-link';
-        link.href = `https://store.steampowered.com/app/${appData.id}/`;
+
+        let typePath = 'app';
+        if (appData.type === 'sub') typePath = 'sub';
+        if (appData.type === 'bundle') typePath = 'bundle';
+
+        link.href = `https://store.steampowered.com/${typePath}/${appData.id}/`;
         link.target = '_blank';
         link.title = appData.name;
 
@@ -192,7 +199,7 @@
         if (appData.cards) html += `<span>CARDS</span>`;
         if (appData.owned) html += `<span class="ssl-owned">OWNED</span>`;
         else if (appData.wishlisted) html += `<span class="ssl-wishlist">WISHLIST</span>`;
-        else if (appData.ignored) html += `<span class="ssl-ignored">IGNORED</span>`;
+        if (appData.ignored) html += `<span class="ssl-ignored">IGNORED</span>`;
         if (appData.proton) html += `<span>${appData.proton} PROTON</span>`;
 
         link.innerHTML = html;
@@ -245,7 +252,7 @@
                     try {
                         const data = JSON.parse(response.responseText);
                         const userData = {
-                            ownedApps: data.rgOwnedPackages || [],
+                            ownedApps: data.rgOwnedApps || [],
                             wishlist: data.rgWishlist || [],
                             ignored: data.rgIgnoredApps || {}
                         };
@@ -274,11 +281,35 @@
                     try {
                         const data = JSON.parse(response.responseText);
                         if (data.items && data.items.length > 0) {
-                            let bestMatch = data.items[0];
-                            const exact = data.items.find(i => i.name.toLowerCase() === cleanedName.toLowerCase());
-                            if (exact) bestMatch = exact;
 
-                            if (!bestMatch.id) {
+                            // Helper to extract ID from logo if missing
+                            const extractId = (item) => {
+                                if (item.id) return { id: item.id, type: item.type || 'app' };
+                                if (item.logo) {
+                                    const match = item.logo.match(/\/steam\/(apps|subs|bundles)\/(\d+)\//);
+                                    if (match) {
+                                        let type = 'app';
+                                        if (match[1] === 'subs') type = 'sub';
+                                        if (match[1] === 'bundles') type = 'bundle';
+                                        return { id: parseInt(match[2]), type: type };
+                                    }
+                                }
+                                return null;
+                            };
+
+                            let bestMatch = data.items[0];
+                            let bestInfo = extractId(bestMatch);
+
+                            const exact = data.items.find(i => i.name.toLowerCase() === cleanedName.toLowerCase());
+                            if (exact) {
+                                const exactInfo = extractId(exact);
+                                if (exactInfo) {
+                                    bestMatch = exact;
+                                    bestInfo = exactInfo;
+                                }
+                            }
+
+                            if (!bestInfo) {
                                 resolve(null);
                                 return;
                             }
@@ -287,15 +318,16 @@
                             const similarity = getSimilarity(cleanedName, bestMatch.name);
                             if (similarity < 0.7) {
                                 console.log(`[Steam Linker] Low similarity (${(similarity * 100).toFixed(0)}%) for "${cleanedName}" -> "${bestMatch.name}". Ignoring.`);
-                                setStoredValue(cacheKey, { data: null, timestamp: Date.now() }); // Cache as "not found" to save API calls
+                                setStoredValue(cacheKey, { data: null, timestamp: Date.now() });
                                 resolve(null);
                                 return;
                             }
 
                             const result = {
-                                id: bestMatch.id,
+                                id: bestInfo.id,
+                                type: bestInfo.type,
                                 name: bestMatch.name,
-                                tiny_image: bestMatch.tiny_image,
+                                tiny_image: bestMatch.tiny_image || bestMatch.logo,
                                 price: bestMatch.price ? (bestMatch.price.final / 100) + ' ' + bestMatch.price.currency : null,
                                 discount: bestMatch.price ? bestMatch.price.discount_percent : 0,
                             };
