@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Store Linker (Humble & Fanatical)
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @description  Adds Steam links and ownership status to Humble Bundle and Fanatical
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
