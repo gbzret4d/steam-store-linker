@@ -131,8 +131,10 @@
     // --- API & Constants ---
     const STEAM_USERDATA_API = 'https://store.steampowered.com/dynamicstore/userdata/';
     const STEAM_SEARCH_API = 'https://store.steampowered.com/search/results/?json=1&term=';
+    const STEAM_REVIEWS_API = 'https://store.steampowered.com/appreviews/';
     const PROTONDB_API = 'https://www.protondb.com/api/v1/reports/summaries/';
     const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+    const CACHE_VERSION = '1.8'; // Increment to invalidate old caches
 
     // Styles
     const css = `
@@ -159,6 +161,10 @@
         .ssl-wishlist { color: #66c0f4; font-weight: bold; }
         .ssl-ignored { color: #d9534f; }
 
+        .ssl-review-positive { color: #66C0F4; font-weight: bold; } /* Blue for positive */
+        .ssl-review-mixed { color: #a8926a; font-weight: bold; } /* Brown for mixed */
+        .ssl-review-negative { color: #c15755; font-weight: bold; } /* Red for negative */
+        
         .ssl-container-owned {
             opacity: 1 !important;
             filter: grayscale(0%) !important;
