@@ -14,7 +14,9 @@ A Tampermonkey Userscript that enhances **Humble Bundle** and **Fanatical** stor
     - **Steam Deck / ProtonDB**: Shows a colored circle indicating Linux/Deck compatibility (Platinum, Gold, Silver, Bronze, Borked) via ProtonDB.
     - **Trading Cards**: Displays a blue card icon if the game drops Steam Trading Cards.
     - **Content Type**: Distinguishes between base games, **DLCs** (yellow icon), and **Soundtracks** (note icon).
-    - **Steam User Rating**: Displays the percentage of positive user reviews from Steam.
+    - **Steam User Rating**: Displays the percentage of positive user reviews from Steam (Blue >70%, Mixed, Red <40%).
+    - **Fanatical API Interceptor**: Captures internal API data on Fanatical for 100% accuracy (no name guessing).
+    - **Humble Bundle Carousel**: Supports the game detail modals/popups.
 - **Stats Panel**: A floating panel shows a summary of the current page (Total, Owned, Missing, etc.).
 - **Smart Tooltips**: Hover over the Steam icon to see the game's **Cover Art** and full title.
 
@@ -55,6 +57,7 @@ You can also manually update by clicking the installation link again or checking
 - **Steam**: For providing the platform and data.
 - **SteamDB / ProtonDB**: For their excellent public APIs.
 - **Caching**: Results are cached in Tampermonkey storage to respect API rate limits and speed up subsequent page loads.
+- **Fanatical**: For their exposed internal API key structure that allows 100% accurate matching.
 
 ## Author
 
