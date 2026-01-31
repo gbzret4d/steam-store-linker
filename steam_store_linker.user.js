@@ -1,7 +1,96 @@
 // ==UserScript==
 // @name         Steam Store Linker (Humble & Fanatical)
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
+
+// ... (skipping to searchSteamGame)
+
+async function searchSteamGame(gameName) {
+    const cacheKey = 'steam_search_' + encodeURIComponent(gameName);
+    const cached = getStoredValue(cacheKey, null);
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL * 7)) return cached.data;
+
+    const cleanupRegex = /(:| -| –| —)?\s*(The\s+)?(Complete|Anthology|Collection|Definitive|Game of the Year|GOTY|Deluxe|Ultimate|Premium)(\s+(Edition|Cut|Content|Pack))?(\s+Bundle)?(\s*\.{3,})?/gi;
+    const cleanedName = gameName.replace(cleanupRegex, '').trim().toLowerCase();
+
+    return steamQueue.add(() => new Promise((resolve) => {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: STEAM_SEARCH_API + encodeURIComponent(cleanedName),
+            onload: (response) => {
+                try {
+                    const data = JSON.parse(response.responseText);
+                    if (data.items && data.items.length > 0) {
+
+                        // Helper to extract ID from logo if missing
+                        const extractId = (item) => {
+                            if (item.id) return { id: item.id, type: item.type || 'app' };
+                            if (item.logo) {
+                                const match = item.logo.match(/\/steam\/(apps|subs|bundles)\/(\d+)\//);
+                                if (match) {
+                                    let type = 'app';
+                                    if (match[1] === 'subs') type = 'sub';
+                                    if (match[1] === 'bundles') type = 'bundle';
+                                    return { id: parseInt(match[2]), type: type };
+                                }
+                            }
+                            return null;
+                        };
+
+                        let bestMatch = null;
+                        let maxScore = -1;
+
+                        data.items.forEach(item => {
+                            const info = extractId(item);
+                            if (!info) return;
+
+                            const itemName = item.name.toLowerCase();
+                            const similarity = getSimilarity(cleanedName, itemName);
+                            let score = similarity;
+
+                            // Bonuses
+                            if (itemName === cleanedName) score += 0.5; // Exact match bonus
+                            if (itemName.startsWith(cleanedName)) score += 0.2; // Prefix bonus
+
+                            // Penalties for type mismatch (unless requested)
+                            if (!cleanedName.includes('vr') && itemName.includes('vr')) score -= 0.5;
+                            if (!cleanedName.includes('soundtrack') && (itemName.includes('soundtrack') || itemName.includes('ost'))) score -= 0.5;
+                            if (!cleanedName.includes('demo') && itemName.includes('demo')) score -= 0.5;
+                            if (!cleanedName.includes('dlc') && itemName.includes('dlc')) score -= 0.3;
+
+                            if (score > maxScore) {
+                                maxScore = score;
+                                bestMatch = { ...item, ...info };
+                            }
+                        });
+
+                        if (!bestMatch || maxScore < 0.6) { // Threshold
+                            console.log(`[Steam Linker] No good match for "${cleanedName}". Best: "${bestMatch ? bestMatch.name : 'none'}" (Score: ${maxScore.toFixed(2)})`);
+                            setStoredValue(cacheKey, { data: null, timestamp: Date.now() });
+                            resolve(null);
+                            return;
+                        }
+
+                        const result = {
+                            id: bestMatch.id,
+                            type: bestMatch.type,
+                            name: bestMatch.name,
+                            tiny_image: bestMatch.tiny_image || bestMatch.logo,
+                            price: bestMatch.price ? (bestMatch.price.final / 100) + ' ' + bestMatch.price.currency : null,
+                            discount: bestMatch.price ? bestMatch.price.discount_percent : 0,
+                        };
+                        setStoredValue(cacheKey, { data: result, timestamp: Date.now() });
+                        resolve(result);
+                    } else {
+                        setStoredValue(cacheKey, { data: null, timestamp: Date.now() });
+                        resolve(null);
+                    }
+                } catch (e) { resolve(null); }
+            },
+            onerror: () => resolve(null)
+        });
+    }));
+}
 
 
 // @description  Adds Steam links and ownership status to Humble Bundle and Fanatical
