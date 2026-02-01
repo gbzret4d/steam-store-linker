@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Store Linker (Humble & Fanatical)
 // @namespace    http://tampermonkey.net/
-// @version      1.11
+// @version      1.12
 // @description  Adds Steam links and ownership status to Humble Bundle and Fanatical
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -261,7 +261,7 @@
             html += `<span class="${colorClass}">${appData.reviews.percent}%</span>`;
         }
 
-        if (appData.ignored) html += `<span class="ssl-ignored">IGNORED</span>`;
+        if (appData.ignored !== undefined) html += `<span class="ssl-ignored">IGNORED</span>`;
         if (appData.proton) html += `<span>${appData.proton} PROTON</span>`;
 
         link.innerHTML = html;
@@ -567,8 +567,8 @@
         const gameName = nameEl.textContent.trim();
         if (!gameName) return;
 
-        stats.total++;
-        updateStatsUI();
+        // v1.12: Move stats increment to AFTER successful processing to avoid infinite counting on re-scans
+        const isNewStats = !element.dataset.sslStatsCounted;
 
         try {
             // v1.3: 1. Asset Scan (Priority)
@@ -627,19 +627,26 @@
 
                 const appData = { ...result, id: appId, owned, wishlisted, ignored, proton, reviews };
 
+
+
                 if (owned) {
-                    stats.owned++;
+                    if (isNewStats) stats.owned++;
                     element.classList.add('ssl-container-owned');
                 } else if (wishlisted) {
-                    stats.wishlist++;
+                    if (isNewStats) stats.wishlist++;
                     element.classList.add('ssl-container-wishlist');
-                } else if (ignored) {
-                    stats.ignored++;
+                } else if (ignored !== undefined) {
+                    if (isNewStats) stats.ignored++;
                     element.classList.add('ssl-container-ignored');
                 } else {
-                    stats.missing++;
+                    if (isNewStats) stats.missing++;
                 }
-                updateStatsUI();
+
+                if (isNewStats) {
+                    stats.total++;
+                    element.dataset.sslStatsCounted = "true";
+                    updateStatsUI();
+                }
 
                 const link = createSteamLink(appData);
                 nameEl.after(link);
