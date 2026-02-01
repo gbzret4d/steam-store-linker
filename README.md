@@ -70,7 +70,7 @@ This script is not affiliated with Humble Bundle, Fanatical, Valve, or ProtonDB.
 ## To-Do
 
 - [ ] Add settings panel to toggle features (e.g. Hide Owned Games).
-- [ ] Support more bundle sites (e.g. Indiegala).
+- [ ] Support more bundle sites (e.g. Indiegala, GOG, DailyIndieGame, SteamGifts).
 - [ ] Improve performance on very large pages.
 
 ## License
