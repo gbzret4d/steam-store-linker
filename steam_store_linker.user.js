@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Store Linker (Humble & Fanatical)
 // @namespace    http://tampermonkey.net/
-// @version      1.16
+// @version      1.17
 // @description  Adds Steam links and ownership status to Humble Bundle and Fanatical
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -138,7 +138,7 @@
     const STEAM_REVIEWS_API = 'https://store.steampowered.com/appreviews/';
     const PROTONDB_API = 'https://www.protondb.com/api/v1/reports/summaries/';
     const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-    const CACHE_VERSION = '1.9'; // Increment to invalidate old caches
+    const CACHE_VERSION = '2.0'; // Increment to invalidate old caches
 
     // Styles
     const css = `
@@ -263,7 +263,7 @@
         if (appData.owned) html += `<span class="ssl-owned">OWNED</span>`;
         else if (appData.wishlisted) html += `<span class="ssl-wishlist">WISHLIST</span>`;
 
-        if (appData.reviews) {
+        if (appData.reviews && typeof appData.reviews.percent === 'number' && !isNaN(appData.reviews.percent) && appData.reviews.total > 0) {
             let colorClass = 'ssl-review-mixed';
             if (appData.reviews.percent >= 70) colorClass = 'ssl-review-positive';
             if (appData.reviews.percent < 40) colorClass = 'ssl-review-negative';
@@ -331,7 +331,7 @@
                         if (data.query_summary) {
                             const summary = data.query_summary;
                             const result = {
-                                percent: Math.floor((summary.total_positive / summary.total_reviews) * 100),
+                                percent: (summary.total_reviews > 0) ? Math.floor((summary.total_positive / summary.total_reviews) * 100) : 0,
                                 total: summary.total_reviews,
                                 score: summary.review_score_desc // "Very Positive", etc.
                             };
@@ -621,6 +621,12 @@
             }
 
             if (result) {
+                // v1.17: Loop Prevention - Validate ID before processing
+                if (!result.id || isNaN(parseInt(result.id))) {
+                    console.warn(`[Steam Linker] Result found but ID is missing/invalid for "${gameName}". Marking as error.`);
+                    element.dataset.sslProcessed = "error";
+                    return;
+                }
                 const appId = parseInt(result.id);
                 const userData = await userDataPromise;
                 const owned = userData.ownedApps.includes(appId);

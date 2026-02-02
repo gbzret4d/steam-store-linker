@@ -2,6 +2,16 @@
 
 All notable changes to the **Steam Store Linker** userscript will be documented in this file.
 
+
+## [1.17] - 2026-02-02
+### Fixed
+- **Fanatical**: Resolved infinite loop when encountering "app/null" entries (e.g., in mini-bundles).
+  - Explicitly marks invalid IDs as errors to prevent endless re-scanning.
+- **Steam Reviews**: Fixed "null%" display for games with 0 reviews or invalid data.
+  - Added safeguards against `NaN` calculations.
+  - Hides the review badge entirely if total reviews are 0 (prevents misleading red "0%").
+- **Core**: Bumped `CACHE_VERSION` to '2.0' to clear any corrupted "null" data from the cache.
+
 ## [1.16] - 2026-02-01
 ### Fixed
 - **UI**: Resolved text clipping in Humble Bundle Grid.

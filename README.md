@@ -71,6 +71,7 @@ This script is not affiliated with Humble Bundle, Fanatical, Valve, or ProtonDB.
 
 - [ ] Add settings panel to toggle features (e.g. Hide Owned Games).
 - [ ] Support more bundle sites (e.g. Indiegala, GOG, DailyIndieGame, SteamGifts).
+- [ ] Implement "External Database Mapping" (JSON on GitHub) to manually potential fix missing/wrong links for complex bundles.
 - [ ] Improve performance on very large pages.
 
 ## License
