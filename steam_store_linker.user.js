@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Store Linker (Humble & Fanatical)
 // @namespace    http://tampermonkey.net/
-// @version      1.27
+// @version      1.28
 // @description  Adds Steam links and ownership status to Humble Bundle and Fanatical
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -231,7 +231,8 @@
     GM_addStyle(css);
 
     // --- State & UI ---
-    const stats = { total: 0, owned: 0, wishlist: 0, ignored: 0, missing: 0, no_data: 0 };
+    // v1.28: Add countedSet for deduplication
+    const stats = { total: 0, owned: 0, wishlist: 0, ignored: 0, missing: 0, no_data: 0, countedSet: new Set() };
 
     function updateStatsUI() {
         let panel = document.getElementById('ssl-stats');
@@ -610,6 +611,17 @@
         const gameName = nameEl.textContent.trim();
         if (!gameName) return;
 
+        // v1.28: Deduplication Helper
+        const getUniqueId = (el, name) => {
+            const link = el.querySelector('a[href]');
+            if (link && link.href) {
+                // Remove query parameters to normalize URLs
+                return link.href.split('?')[0];
+            }
+            return name; // Fallback to name if no link found
+        };
+        const uniqueId = getUniqueId(element, gameName);
+
         // v1.12: Move stats increment to AFTER successful processing to avoid infinite counting on re-scans
         const isNewStats = !element.dataset.sslStatsCounted;
 
@@ -668,10 +680,14 @@
                     console.warn(`[Steam Linker] Result found but ID is missing/invalid for "${gameName}". Marking as error.`);
                     element.dataset.sslProcessed = "error";
                     if (isNewStats) {
-                        stats.no_data++;
-                        stats.total++;
+                        // v1.28: Deduplication check
+                        if (!stats.countedSet.has(uniqueId)) {
+                            stats.no_data++;
+                            stats.total++;
+                            stats.countedSet.add(uniqueId);
+                            updateStatsUI();
+                        }
                         element.dataset.sslStatsCounted = "true";
-                        updateStatsUI();
                     }
                     return;
                 }
@@ -693,22 +709,25 @@
 
 
                 if (owned) {
-                    if (isNewStats) stats.owned++;
+                    if (isNewStats && !stats.countedSet.has(uniqueId)) stats.owned++;
                     element.classList.add('ssl-container-owned');
                 } else if (wishlisted) {
-                    if (isNewStats) stats.wishlist++;
+                    if (isNewStats && !stats.countedSet.has(uniqueId)) stats.wishlist++;
                     element.classList.add('ssl-container-wishlist');
                 } else if (ignored !== undefined) {
-                    if (isNewStats) stats.ignored++;
+                    if (isNewStats && !stats.countedSet.has(uniqueId)) stats.ignored++;
                     element.classList.add('ssl-container-ignored');
                 } else {
-                    if (isNewStats) stats.missing++;
+                    if (isNewStats && !stats.countedSet.has(uniqueId)) stats.missing++;
                 }
 
                 if (isNewStats) {
-                    stats.total++;
+                    if (!stats.countedSet.has(uniqueId)) {
+                        stats.total++;
+                        stats.countedSet.add(uniqueId);
+                        updateStatsUI();
+                    }
                     element.dataset.sslStatsCounted = "true";
-                    updateStatsUI();
                 }
 
                 const link = createSteamLink(appData);
@@ -717,20 +736,27 @@
             } else {
                 element.dataset.sslProcessed = "notfound";
                 if (isNewStats) {
-                    stats.no_data++;
-                    stats.total++;
+                    if (!stats.countedSet.has(uniqueId)) {
+                        stats.no_data++;
+                        stats.total++;
+                        stats.countedSet.add(uniqueId);
+                        updateStatsUI();
+                    }
                     element.dataset.sslStatsCounted = "true";
-                    updateStatsUI();
                 }
             }
         } catch (e) {
             console.error(e);
             element.dataset.sslProcessed = "error";
             if (isNewStats) {
-                stats.no_data++;
-                stats.total++;
+                if (!stats.countedSet.has(uniqueId)) { // v1.28
+                    stats.no_data++;
+                    stats.total++;
+                    stats.countedSet.add(uniqueId);
+                    updateStatsUI();
+                }
                 element.dataset.sslStatsCounted = "true";
-                updateStatsUI();
+
             }
         }
     }

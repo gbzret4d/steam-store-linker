@@ -4,6 +4,12 @@ All notable changes to the **Steam Store Linker** userscript will be documented 
 
 
 
+## [1.28] - 2026-02-03
+### Fixed
+- **Fanatical**: Added item deduplication for the **Stats Panel**.
+  - Duplicate visible items (e.g. valid games appearing in both "Just Launched" carousel and the main list) are now counted only once in the *Total / Owned / Wishlisted* stats.
+  - Ensures correct "Total" count even on complex pages like Bundles, while still showing links on all instances.
+
 ## [1.26] - 2026-02-03
 ### Fixed
 - **Stats**: Added "No Data" category to the stats panel.
