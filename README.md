@@ -4,7 +4,7 @@ A Tampermonkey Userscript that enhances **Humble Bundle** and **Fanatical** stor
 
 ## Features
 
-- **Multi-Site Support**: Works on Humble Bundle and Fanatical.
+- **Multi-Site Support**: Works on Humble Bundle, Fanatical, and DailyIndieGame.
 - **Steam Integration**: Adds a direct link to the Steam store page for games found in bundles.
 - **Visual Status Icons**:
     - **Owned**: Games you own are marked with a green checkmark check and grayed out.

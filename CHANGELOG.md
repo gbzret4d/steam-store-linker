@@ -4,6 +4,13 @@ All notable changes to the **Steam Store Linker** userscript will be documented 
 
 
 
+## [1.30] - 2026-02-04
+### Added
+- **DailyIndieGame**: Added full support for **DailyIndieGame.com**.
+  - Works on **Marketplace**, **Bundles**, and **Product Pages**.
+  - **Native Integration**: Replaces the site's default "View on Steam" text/links with our enhanced stats badge.
+  - **Performance**: Uses the site's URL structure to grab the Steam AppID directly, bypassing the Steam Search API entirely for instant results.
+
 ## [1.29] - 2026-02-03
 ### Added
 - **Fanatical**: Added support for **User Pages**.

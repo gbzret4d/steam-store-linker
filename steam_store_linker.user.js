@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         Steam Store Linker (Humble & Fanatical)
 // @namespace    http://tampermonkey.net/
-// @version      1.29
+// @version      1.30
 // @description  Adds Steam links and ownership status to Humble Bundle and Fanatical
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
 // @match        https://www.fanatical.com/*
+// @match        https://www.dailyindiegame.com/*
+// @match        https://dailyindiegame.com/*
 // @icon         https://store.steampowered.com/favicon.ico
 // @updateURL    https://raw.githubusercontent.com/gbzret4d/steam-store-linker/main/steam_store_linker.user.js
 // @downloadURL  https://raw.githubusercontent.com/gbzret4d/steam-store-linker/main/steam_store_linker.user.js
@@ -80,6 +82,32 @@
                 return breadcrumbs.some(b => keywords.some(k => b.innerText.trim() === k)); // v1.24: Exact match only
             }
         },
+        'dailyindiegame.com': {
+            name: 'DailyIndieGame',
+            selectors: [
+                // Main Marketplace & Bundles (Text link with AppID)
+                { container: 'td', title: 'a[href^="site_gamelisting_"]' },
+                // Product Page
+                { container: '#content', title: 'font[size="5"]' },
+                // Bundle Page (List view)
+                { container: 'table', title: 'a[href^="site_gamelisting_"]' }
+            ],
+            // Custom logic to grab ID from URL directly
+            getAppId: (element) => {
+                // 1. Check for 'site_gamelisting_' links
+                const link = element.querySelector('a[href^="site_gamelisting_"]');
+                if (link) {
+                    const match = link.href.match(/site_gamelisting_(\d+)/);
+                    if (match) return match[1];
+                }
+                // 2. Check current URL if on product page
+                if (window.location.href.includes('site_gamelisting_')) {
+                    const match = window.location.href.match(/site_gamelisting_(\d+)/);
+                    if (match) return match[1];
+                }
+                return null;
+            }
+        }
 
     };
 
@@ -598,6 +626,12 @@
         if (element.dataset.sslProcessed) return;
 
         const nameEl = element.querySelector(nameSelector);
+        // v1.30: DailyIndieGame sometimes needs to process the element itself if it IS the link
+        if (!nameEl && currentConfig.name === 'DailyIndieGame' && element.tagName === 'A') {
+            // Logic to handle direct link processing if needed, but our selectors use containers.
+            // For now, if nameEl is missing, we skip, unless we want to treat 'element' as the name source.
+        }
+
         if (!nameEl) return;
 
         // Custom Validator
@@ -631,6 +665,26 @@
         try {
             // v1.3: 1. Asset Scan (Priority)
             let result = null;
+
+            // v1.30: DailyIndieGame Direct ID Lookup
+            if (currentConfig.name === 'DailyIndieGame' && currentConfig.getAppId) {
+                const directId = currentConfig.getAppId(element);
+                if (directId) {
+                    result = {
+                        id: directId,
+                        type: 'app',
+                        name: gameName,
+                        tiny_image: null, price: null, discount: 0
+                    };
+
+                    // Special Handling: Hide native Steam link if present
+                    const nativeLink = element.querySelector('a[href*="store.steampowered.com"]');
+                    if (nativeLink) nativeLink.style.display = 'none';
+
+                    // If we are replacing a native link, we might want to hide the "View on Steam" text node too if it's separate?
+                    // For now, hiding the link is the main goal.
+                }
+            }
 
             // v1.7: Fanatical API Map Lookup (Highest Priority)
             if (currentConfig.interceptor) {
