@@ -4,6 +4,12 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
 
 
 
+## [1.35] - 2026-02-04
+### Fixed
+- **DailyIndieGame**:
+  - **Visual Spacing**: Added a "gap" between game rows by simulating a margin using a transparent border. This prevents the "colored wall" effect.
+  - **Badge Visibility**: Improved insertion logic to ensure badges appear correctly next to game titles.
+
 ## [1.34] - 2026-02-04
 ### Fixed
 - **DailyIndieGame**: 

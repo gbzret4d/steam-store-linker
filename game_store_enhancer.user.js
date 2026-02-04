@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (formerly Steam Store Linker)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      1.34
+// @version      1.35
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, and GOG with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -232,10 +232,12 @@
         .ssl-review-mixed { color: #a8926a; font-weight: bold; } /* Brown for mixed */
         .ssl-review-negative { color: #c15755; font-weight: bold; } /* Red for negative */
         
+        /* v1.34: Add "gap" between rows on DIG by using a border that matches the background color */
+        /* Note: We use border-bottom on the container to simulate a gap because standard margins don't work on TR/TD well without collapsing */
         .ssl-container-owned {
-            opacity: 1 !important;
-            filter: grayscale(0%) !important;
-            border: 4px solid #a4d007 !important; /* Switch to border for visibility */
+            border: 4px solid #a4d007 !important;
+            border-bottom: 8px solid #1a1c1d !important; /* Gap Simulation */
+            background-color: rgba(76, 107, 34, 0.3) !important; 
             box-shadow: inset 0 0 20px rgba(164, 208, 7, 0.4);
             box-sizing: border-box !important;
             transition: all 0.2s;
@@ -246,6 +248,8 @@
         }
         .ssl-container-wishlist {
             border: 4px solid #66c0f4 !important;
+            border-bottom: 8px solid #1a1c1d !important; /* Gap Simulation */
+            background-color: rgba(59, 110, 140, 0.3) !important;
             box-shadow: inset 0 0 20px rgba(102, 192, 244, 0.4);
             box-sizing: border-box !important;
             border-radius: 4px;
@@ -253,6 +257,8 @@
         }
         .ssl-container-ignored {
             border: 4px solid #d9534f !important;
+            border-bottom: 8px solid #1a1c1d !important; /* Gap Simulation */
+            background-color: rgba(90, 90, 90, 0.3) !important;
             box-shadow: inset 0 0 10px rgba(217, 83, 79, 0.4);
             box-sizing: border-box !important;
             opacity: 0.5;
@@ -644,10 +650,9 @@
 
         const nameEl = element.querySelector(nameSelector);
 
-        // v1.34: Deduplication Check - If an ssl-link already exists inside this element, DO NOT add another one.
-        // This acts as a safety against messy HTML or aggressive re-scanning logic on sites like DIG.
+        // v1.35: Deduplication Check - Prevent multiple badges
         if (element.querySelector('.ssl-link')) {
-            element.dataset.sslProcessed = "true"; // Ensure it's marked as done
+            element.dataset.sslProcessed = "true";
             return;
         }
 
