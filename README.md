@@ -1,6 +1,7 @@
-# Steam Store Linker (Humble & Fanatical)
+# Game Store Enhancer (formerly Steam Store Linker)
 
-A Tampermonkey Userscript that enhances **Humble Bundle** and **Fanatical** store pages by adding Steam store links, ownership status, wishlist indicators, bundle statistics, and other useful game info.
+A Tampermonkey Userscript that enhances **Humble Bundle**, **Fanatical**, **DailyIndieGame**, and **GOG.com** with Steam data.
+It displays your **Ownership Status**, **Wishlist**, **Steam User Reviews**, **Deck Compatibility**, and links directly to the Steam store.
 
 ## Features
 
@@ -24,7 +25,7 @@ A Tampermonkey Userscript that enhances **Humble Bundle** and **Fanatical** stor
 ## Installation
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) extension for your browser.
-2. [Click this link to install the script](https://raw.githubusercontent.com/gbzret4d/steam-store-linker/main/steam_store_linker.user.js).
+2. [Click this link to install the script](https://raw.githubusercontent.com/gbzret4d/game-store-enhancer/main/game_store_enhancer.user.js).
 3. Confirm the installation in Tampermonkey.
 
 ## Updates

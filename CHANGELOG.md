@@ -1,8 +1,14 @@
 # Changelog
 
-All notable changes to the **Steam Store Linker** userscript will be documented in this file.
+All notable changes to the **Game Store Enhancer** userscript will be documented in this file.
 
 
+
+## [1.32] - 2026-02-04
+### Changed
+- **Project Structure**: Renamed project to **Game Store Enhancer** to reflect support for multiple stores (Humble, Fanatical, DIG, GOG).
+- **File Name**: Userscript renamed to `game_store_enhancer.user.js`.
+- **Repo Links**: Updated all update/download URLs to point to the new `game-store-enhancer` repository.
 
 ## [1.31] - 2026-02-04
 ### Added

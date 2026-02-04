@@ -1,18 +1,18 @@
 // ==UserScript==
-// @name         Steam Store Linker (Humble & Fanatical)
-// @namespace    http://tampermonkey.net/
-// @version      1.31
-// @description  Adds Steam links and ownership status to Humble Bundle and Fanatical
+// @name         Game Store Enhancer (formerly Steam Store Linker)
+// @namespace    https://github.com/gbzret4d/game-store-enhancer
+// @version      1.32
+// @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, and GOG with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
 // @match        https://www.fanatical.com/*
-// @match        https://www.dailyindiegame.com/*
 // @match        https://dailyindiegame.com/*
+// @match        https://www.dailyindiegame.com/*
 // @match        https://www.gog.com/*
 // @icon         https://store.steampowered.com/favicon.ico
-// @updateURL    https://raw.githubusercontent.com/gbzret4d/steam-store-linker/main/steam_store_linker.user.js
-// @downloadURL  https://raw.githubusercontent.com/gbzret4d/steam-store-linker/main/steam_store_linker.user.js
-// @homepageURL  https://github.com/gbzret4d/steam-store-linker
+// @updateURL    https://raw.githubusercontent.com/gbzret4d/game-store-enhancer/main/game_store_enhancer.user.js
+// @downloadURL  https://raw.githubusercontent.com/gbzret4d/game-store-enhancer/main/game_store_enhancer.user.js
+// @homepageURL  https://github.com/gbzret4d/game-store-enhancer
 // @connect      store.steampowered.com
 // @connect      www.protondb.com
 // @grant        GM_xmlhttpRequest
@@ -164,7 +164,7 @@
 
             return response;
         };
-        console.log('[Steam Linker] Fanatical API Interceptor active.');
+        console.log('[Game Store Enhancer] Fanatical API Interceptor active.');
     }
 
     function getCurrentSiteConfig() {
@@ -177,12 +177,12 @@
 
     const currentConfig = getCurrentSiteConfig();
     if (!currentConfig) {
-        console.log('[Steam Linker] Site not supported');
+        console.log('[Game Store Enhancer] Site not supported');
         return;
     }
 
     if (currentConfig.ignoreUrl && window.location.href.includes(currentConfig.ignoreUrl)) {
-        console.log(`[Steam Linker] Ignoring URL pattern: ${currentConfig.ignoreUrl}`);
+        console.log(`[Game Store Enhancer] Ignoring URL pattern: ${currentConfig.ignoreUrl}`);
         return;
     }
 
