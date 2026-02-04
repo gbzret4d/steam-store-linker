@@ -1,7 +1,6 @@
 # TODO
 
-## Bugs / Issues
-- [ ] **[BUG] Humble Bundle Wishlist/Owned detection**: Users report "Owned: 0" after script rename. Likely due to missing UserData permissions/cookies. Verify fix instructions.
+
 
 ## Feature Requests
 - [ ] **Steam Age Check Bypass**: Implement a function to automatically pass the Steam age check (e.g. by setting `birthtime` cookie) to fetch data for age-gated games.
