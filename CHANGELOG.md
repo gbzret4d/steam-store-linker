@@ -4,6 +4,13 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
 
 
 
+## [1.36] - 2026-02-04
+### Fixed
+- **DailyIndieGame**:
+  - **Layout Fix**: Safely hides the "STEAM page link" column without breaking the entire site layout (Targeted specifically at game rows).
+  - **Badge Visibility**: Changed insertion method to append badges to the parent container, solving the issue where badges were hidden or cut off.
+  - **CSS**: Refined gap visualization.
+
 ## [1.35] - 2026-02-04
 ### Fixed
 - **DailyIndieGame**:

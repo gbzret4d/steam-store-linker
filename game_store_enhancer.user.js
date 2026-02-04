@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (formerly Steam Store Linker)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      1.35
+// @version      1.36
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, and GOG with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -242,6 +242,18 @@
             box-sizing: border-box !important;
             transition: all 0.2s;
             z-index: 10;
+        }
+
+        /* v1.36: Hide the redundant "STEAM page link" column specifically in the game rows */
+        tr[onmouseover] td:last-child, 
+        tr[onmouseover] td:nth-last-child(2) { /* Sometimes there are hidden cols? hiding last visual one */
+             display: none !important; 
+        }
+
+        /* v1.36: Fix Badge Positioning inside table cells */
+        .ssl-link-inline { 
+            margin-left: 10px; 
+            vertical-align: middle; 
         }
         .ssl-container-owned:hover {
             box-shadow: inset 0 0 30px rgba(164, 208, 7, 0.6) !important;
@@ -823,8 +835,17 @@
                     element.dataset.sslStatsCounted = "true";
                 }
 
-                const link = createSteamLink(appData);
-                nameEl.after(link);
+                if (currentConfig.name === 'DailyIndieGame') {
+                    // v1.36: DIG tables act weird with .after(). We append INSIDE the link or right next to it safely.
+                    link.classList.add('ssl-link-inline');
+                    // Try appending to the parent TD if possible, or inside the link?
+                    // Appending inside the link is safest for visibility, but might handle click events wrong. 
+                    // Let's try appending to the parent element (the Link's parent is the TD or Font tag).
+                    nameEl.parentNode.appendChild(link);
+                } else {
+                    nameEl.after(link);
+                }
+
                 element.dataset.sslProcessed = "true";
             } else {
                 element.dataset.sslProcessed = "notfound";
