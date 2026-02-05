@@ -5,6 +5,11 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
 
 
 
+## [1.41] - 2026-02-05
+### Fixed
+- **IndieGala**: Added support for **Homepage / Search Results** grid items (e.g. "Metro Awakening", "Fallout 4").
+  - Added missing selector `.main-list-results-item-margin`.
+
 ## [1.40] - 2026-02-05
 ### Added
 - **IndieGala**: Added full support for **IndieGala.com**.

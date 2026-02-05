@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      1.40
+// @version      1.41
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -129,6 +129,8 @@
             selectors: [
                 // Store / Sales Grid
                 { container: '.store-main-page-items-list-item-col', title: '.store-main-page-items-list-item-details a' },
+                // v1.41: Homepage "Results" Grid (e.g. Metro Awakening)
+                { container: '.main-list-results-item-margin', title: 'h3 a' },
                 // Bundle Tiers (Summary Grid)
                 { container: '.bundle-page-tier-item-col', title: '.bundle-page-tier-item-title' },
                 // Homepage / Top Sellers (Generic Fallback)
