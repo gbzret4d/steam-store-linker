@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      1.46
+// @version      1.47
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -631,6 +631,7 @@
                                 price: bestMatch.price ? (bestMatch.price.final / 100) + ' ' + bestMatch.price.currency : null,
                                 discount: bestMatch.price ? bestMatch.price.discount_percent : 0,
                             };
+                            console.log(`[Game Store Enhancer] Search Success: Found ID ${result.id} for "${cleanedName}"`);
                             setStoredValue(cacheKey, { data: result, timestamp: Date.now() });
                             resolve(result);
                         } else {
@@ -900,6 +901,7 @@
 
                 // v1.46: FIX - Actually create the link element before trying to use it!
                 const link = createSteamLink(appData);
+                console.log(`[Game Store Enhancer] Created link for AppID ${appData.id}`);
 
                 if (owned) {
                     if (isNewStats && !stats.countedSet.has(uniqueId)) stats.owned++;

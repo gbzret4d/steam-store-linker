@@ -5,6 +5,10 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
 
 
 
+## [1.47] - 2026-02-05
+### Fixed
+- **Core / Debug**: Added granular success logs ("Search Success", "Created link") to better trace why some games might not display links despite finding data.
+
 ## [1.46] - 2026-02-05
 ### Fixed
 - **Core**: Fixed a critical crash (`ReferenceError: link is not defined`) when processing game results. This prevented links from showing up even if data was found.
