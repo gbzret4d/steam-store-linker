@@ -5,6 +5,12 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
 
 
 
+## [1.46] - 2026-02-05
+### Fixed
+- **Core**: Fixed a critical crash (`ReferenceError: link is not defined`) when processing game results. This prevented links from showing up even if data was found.
+- **Core**: Added missing `@connect` permission for ProtonDB API (`protondb.max-p.me`), fixing connection errors.
+- **Core**: Bumped Cache Version to 2.5 to force a clean slate for debugging.
+
 ## [1.45] - 2026-02-05
 ### Fixed
 - **Core / Search**: Added debug logging for name cleaning.

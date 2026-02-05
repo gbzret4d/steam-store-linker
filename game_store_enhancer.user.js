@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      1.45
+// @version      1.46
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -17,6 +17,7 @@
 // @homepageURL  https://github.com/gbzret4d/game-store-enhancer
 // @connect      store.steampowered.com
 // @connect      www.protondb.com
+// @connect      protondb.max-p.me
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -244,7 +245,7 @@
     const STEAM_REVIEWS_API = 'https://store.steampowered.com/appreviews/';
     const PROTONDB_API = 'https://protondb.max-p.me/games/';
     const CACHE_TTL = 15 * 60 * 1000; // 15 minutes (v1.25)
-    const CACHE_VERSION = '2.4'; // v1.43: Bump to force reset for regex fix
+    const CACHE_VERSION = '2.5'; // v1.46: Bump for crash fix & fresh logs
 
     // Styles
     const css = `
@@ -897,7 +898,8 @@
 
                 const appData = { ...result, id: appId, owned, wishlisted, ignored, proton, reviews };
 
-
+                // v1.46: FIX - Actually create the link element before trying to use it!
+                const link = createSteamLink(appData);
 
                 if (owned) {
                     if (isNewStats && !stats.countedSet.has(uniqueId)) stats.owned++;
