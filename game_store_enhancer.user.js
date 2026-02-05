@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      1.43
+// @version      1.44
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -768,7 +768,11 @@
         if (element.dataset.sslProcessed) return;
         element.dataset.sslProcessed = "pending";
 
-        const gameName = nameEl.textContent.trim();
+        let gameName = nameEl.textContent.trim();
+        // v1.44: Fallback to title attribute if text is empty (e.g. IndieGala Sale Overlay Links)
+        if (!gameName && nameEl.getAttribute('title')) {
+            gameName = nameEl.getAttribute('title').trim();
+        }
         if (!gameName) return;
 
         // v1.28: Deduplication Helper

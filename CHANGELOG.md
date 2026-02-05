@@ -5,6 +5,11 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
 
 
 
+## [1.44] - 2026-02-05
+### Fixed
+- **IndieGala**: Added support for **Publisher Sale / Submenu Cards** (e.g. "Telltale Sale").
+  - These pages use "overlay" links with no visible text. The script now correctly extracts the game name from the link's `title` attribute.
+
 ## [1.43] - 2026-02-05
 ### Fixed
 - **Core / Search**: Fixed Steam Search ID extraction.
