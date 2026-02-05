@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      1.42
+// @version      1.43
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -244,7 +244,7 @@
     const STEAM_REVIEWS_API = 'https://store.steampowered.com/appreviews/';
     const PROTONDB_API = 'https://protondb.max-p.me/games/';
     const CACHE_TTL = 15 * 60 * 1000; // 15 minutes (v1.25)
-    const CACHE_VERSION = '2.3'; // v1.25: Bump to force reset with new TTL
+    const CACHE_VERSION = '2.4'; // v1.43: Bump to force reset for regex fix
 
     // Styles
     const css = `
@@ -574,7 +574,8 @@
                             const extractId = (item) => {
                                 if (item.id) return { id: item.id, type: item.type || 'app' };
                                 if (item.logo) {
-                                    const match = item.logo.match(/\/steam\/(apps|subs|bundles)\/(\d+)\//);
+                                    // v1.43: More robust regex to handle various URL formats (akamai, steamstatic, etc.)
+                                    const match = item.logo.match(/\/(apps|subs|bundles)\/(\d+)/);
                                     if (match) {
                                         let type = 'app';
                                         if (match[1] === 'subs') type = 'sub';

@@ -5,6 +5,12 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
 
 
 
+## [1.43] - 2026-02-05
+### Fixed
+- **Core / Search**: Fixed Steam Search ID extraction.
+  - Adapted logic to handle newer Steam Search API responses (like for *Resident Evil Requiem*) where the `id` field is missing and the logo URL format has changed.
+  - *Fixes*: "No Steam data found" or stuck loading for games that are definitely on Steam.
+
 ## [1.42] - 2026-02-05
 ### Fixed
 - **IndieGala**: Added support for **Product Detail Pages** (e.g. Resident Evil Requiem).
