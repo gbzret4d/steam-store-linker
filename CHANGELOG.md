@@ -10,6 +10,13 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
 - **IndieGala**: Added automatic **Age Check Bypass**.
   - Automatically clicks the "Confirm" button on 18+ content warnings (e.g. Bundles/Freebies).
 
+## [1.53] - 2026-02-06
+### Fixed
+- **IndieGala**: Fixed **Image Overlay** layout issue ("Overwritten Image").
+  - Changed overlay element from `<a>` to `<div>` to verify compatibility with games that are already wrapped in a link.
+  - *Fixes*: Broken layout/image disappearance on Bundle and Store pages where `<a>` nesting is illegal.
+
+
 ## [1.51] - 2026-02-06
 ### Added
 - **IndieGala**: Implemented **Image Overlay** for store grid items (v1.51).

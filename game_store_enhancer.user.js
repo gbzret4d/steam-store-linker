@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      1.52
+// @version      1.53
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -1020,10 +1020,17 @@
 
                     if (figure) {
                         // 1. Create the overlay element
-                        const overlay = document.createElement('a');
+                        // Use DIV instead of A to avoid illegal nested links (since figure is often inside an A)
+                        const overlay = document.createElement('div');
                         overlay.className = 'ssl-steam-overlay';
-                        overlay.href = link.href;
-                        overlay.target = '_blank';
+                        overlay.title = "Open Steam Store";
+                        overlay.style.cursor = "pointer";
+
+                        overlay.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.open(link.href, '_blank');
+                        });
 
                         // 2. Build Content: Icon + Text + Review Score
                         let reviewSnippet = '';
