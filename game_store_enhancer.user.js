@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      1.54
+// @version      1.55
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -1014,36 +1014,43 @@
                     element.classList.contains('items-list-item') ||
                     element.dataset.sslProcessed !== "true" // Catch-all
                 )) {
-                    // v1.51: IndieGala Image Overlay Strategy
-                    // Find the Image Container (<figure>) and inject the overlay there.
+                    // v1.55: Sibling Overlay Strategy
+                    // New Goal: Insert the overlay as a Sibling to the game link/image to avoid illegal nesting.
+                    // This allows us to use a real <A> tag for "Right Click -> Copy Link".
+
+                    // 1. Find the Image Container (Figure) and Parent Link
                     const figure = element.querySelector('figure');
+                    // On Bundle pages, the link often wraps the figure or is an overlay itself (.fit-click)
+                    const parentLink = element.querySelector('a.fit-click') || element.querySelector('a');
+                    const container = element; // The item container is usually relative
 
-                    if (figure) {
-                        // v1.54: Force relative positioning on the figure to ensure the overlay stays inside
-                        figure.style.position = 'relative';
-                        figure.style.display = 'block'; // Ensure it's block-level
+                    if (figure && parentLink) {
+                        // DUPLICATION CHECK:
+                        // Critical! Check if an overlay already exists in the container to prevents thousands of duplicates.
+                        if (container.querySelector('.ssl-steam-overlay')) {
+                            element.dataset.sslProcessed = "true";
+                            return;
+                        }
 
-                        // 1. Create the overlay element
-                        // Use DIV instead of A to avoid illegal nested links (since figure is often inside an A)
-                        const overlay = document.createElement('div');
+                        // Force relative positioning on the container
+                        container.style.position = 'relative';
+
+                        // Create the overlay as a REAL LINK (<a>)
+                        const overlay = document.createElement('a');
                         overlay.className = 'ssl-steam-overlay';
-                        overlay.title = "Open Steam Store";
-                        overlay.style.cursor = "pointer";
+                        overlay.href = link.href; // Now fully functional
+                        overlay.target = '_blank';
 
-                        // Force styles directly to override any page weirdness
+                        // Strict Styling
                         overlay.style.position = 'absolute';
                         overlay.style.bottom = '0';
                         overlay.style.left = '0';
                         overlay.style.width = '100%';
-                        overlay.style.zIndex = '20'; // Higher than before to beat other overlays
+                        overlay.style.zIndex = '20'; // Above the game link
+                        overlay.style.display = 'flex'; // Ensure flexbox works for content
+                        overlay.style.pointerEvents = 'auto'; // Ensure it catches clicks
 
-                        overlay.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            window.open(link.href, '_blank');
-                        });
-
-                        // 2. Build Content: Icon + Text + Review Score
+                        // Build Content
                         let reviewSnippet = '';
                         if (appData && appData.reviews && appData.reviews.percent) {
                             let color = '#a8926a'; // Mixed
@@ -1054,84 +1061,91 @@
 
                         overlay.innerHTML = `<img src="https://store.steampowered.com/favicon.ico" class="ssl-icon-img" style="width:14px;height:14px;vertical-align:text-top;"> STEAM${reviewSnippet}`;
 
-                        // 3. Append to figure
+                        // INSERTION STRATEGY:
+                        // Append to the container (sibling to the link/figure)
+                        // Since 'container' is relative and wraps the link, this overlay will sit on top.
+                        container.appendChild(overlay);
+
+                    } else if (figure) {
+                        // Fallback for non-link cards (rare)
+                        if (figure.querySelector('.ssl-steam-overlay')) return;
+                        figure.style.position = 'relative';
+                        figure.style.display = 'block';
+
+                        const overlay = document.createElement('div');
+                        overlay.className = 'ssl-steam-overlay';
+                        overlay.innerHTML = `<img src="https://store.steampowered.com/favicon.ico" class="ssl-icon-img" style="width:14px;height:14px;vertical-align:text-top;"> STEAM`;
+                        overlay.style.position = 'absolute';
+                        overlay.style.bottom = '0';
+                        overlay.style.left = '0';
+                        overlay.style.width = '100%';
+                        overlay.style.zIndex = '20';
+                        overlay.style.cursor = "pointer";
+                        overlay.onclick = () => window.open(link.href, '_blank');
                         figure.appendChild(overlay);
                     } else {
                         // Fallback if no figure found
                         nameEl.after(link);
                     }
                 } else {
+                    // Fallback if not an IndieGala overlay target
                     nameEl.after(link);
                 }
-
-                element.dataset.sslProcessed = "true";
-            } else {
-                element.dataset.sslProcessed = "notfound";
+            } catch (e) {
+                console.error(e);
+                element.dataset.sslProcessed = "error";
                 if (isNewStats) {
-                    if (!stats.countedSet.has(uniqueId)) {
+                    if (!stats.countedSet.has(uniqueId)) { // v1.28
                         stats.no_data++;
                         stats.total++;
                         stats.countedSet.add(uniqueId);
                         updateStatsUI();
                     }
                     element.dataset.sslStatsCounted = "true";
-                }
-            }
-        } catch (e) {
-            console.error(e);
-            element.dataset.sslProcessed = "error";
-            if (isNewStats) {
-                if (!stats.countedSet.has(uniqueId)) { // v1.28
-                    stats.no_data++;
-                    stats.total++;
-                    stats.countedSet.add(uniqueId);
-                    updateStatsUI();
-                }
-                element.dataset.sslStatsCounted = "true";
 
+                }
             }
         }
-    }
 
     function scanPage() {
-        if (currentConfig.isExcluded && currentConfig.isExcluded()) return;
-        if (!currentConfig.selectors) return;
+            if (currentConfig.isExcluded && currentConfig.isExcluded()) return;
+            if (!currentConfig.selectors) return;
 
-        if (DEBUG && currentConfig.name === 'IndieGala') {
-            console.log('[Game Store Enhancer] [DEBUG] Scanning IndieGala page...');
-        }
-
-        // v1.52: IndieGala Age Gate Bypass
-        if (currentConfig.name === 'IndieGala') {
-            const confirmBtn = document.querySelector('a.adult-check-confirm');
-            if (confirmBtn) {
-                console.log('[Game Store Enhancer] Auto-confirming Age Gate...');
-                confirmBtn.click();
-            }
-        }
-
-        currentConfig.selectors.forEach(strat => {
-            const elements = document.querySelectorAll(strat.container);
             if (DEBUG && currentConfig.name === 'IndieGala') {
-                console.log(`[Game Store Enhancer] [DEBUG] Selector "${strat.container}" found ${elements.length} elements.`);
+                console.log('[Game Store Enhancer] [DEBUG] Scanning IndieGala page...');
             }
-            elements.forEach(el => {
-                processGameElement(el, strat.title);
+
+            // v1.52: IndieGala Age Gate Bypass
+            if (currentConfig.name === 'IndieGala') {
+                const confirmBtn = document.querySelector('a.adult-check-confirm');
+                if (confirmBtn) {
+                    console.log('[Game Store Enhancer] Auto-confirming Age Gate...');
+                    confirmBtn.click();
+                }
+            }
+
+            currentConfig.selectors.forEach(strat => {
+                const elements = document.querySelectorAll(strat.container);
+                if (DEBUG && currentConfig.name === 'IndieGala') {
+                    console.log(`[Game Store Enhancer] [DEBUG] Selector "${strat.container}" found ${elements.length} elements.`);
+                }
+                elements.forEach(el => {
+                    processGameElement(el, strat.title);
+                });
             });
-        });
-    }
-
-    // --- Observer ---
-    const observer = new MutationObserver((mutations) => {
-        let shouldScan = false;
-        mutations.forEach(m => { if (m.addedNodes.length > 0) shouldScan = true; });
-        if (shouldScan) {
-            if (window.sslScanTimeout) clearTimeout(window.sslScanTimeout);
-            window.sslScanTimeout = setTimeout(scanPage, 500);
         }
-    });
 
-    observer.observe(document.body, { childList: true, subtree: true });
-    setTimeout(scanPage, 1000);
+        // --- Observer ---
+        const observer = new MutationObserver((mutations) => {
+            let shouldScan = false;
+            mutations.forEach(m => { if (m.addedNodes.length > 0) shouldScan = true; });
+            if (shouldScan) {
+                if (window.sslScanTimeout) clearTimeout(window.sslScanTimeout);
+                window.sslScanTimeout = setTimeout(scanPage, 500);
+            }
+        });
 
-})();
+        observer.observe(document.body, { childList: true, subtree: true });
+        setTimeout(scanPage, 1000);
+
+    }) ();

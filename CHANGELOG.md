@@ -23,6 +23,14 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
   - Switched overlay positioning to strict `bottom: 0` / `left: 0`.
   - Increased `z-index` to 20 to appear above local overlays.
 
+## [1.55] - 2026-02-06
+### Fixed
+- **IndieGala**: Fixed **"Right Click to Copy Link"** on Image Overlay.
+  - Re-implemented overlay as a real `<a>` tag (instead of `div`).
+  - **Strategy**: Inserted as a *sibling* to the game card link (absolute positioning inside valid relative container) to avoid illegal HTML nesting.
+  - **Duplication Fix**: Added strict check to prevent infinite overlay creation loop on Store pages.
+
+
 
 ## [1.51] - 2026-02-06
 ### Added
