@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      1.55
+// @version      1.57
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -128,8 +128,9 @@
         'indiegala.com': {
             name: 'IndieGala',
             selectors: [
-                // Store / Sales Grid
-                { container: '.store-main-page-items-list-item-col', title: '.store-main-page-items-list-item-details a' },
+                // Store / Sales Grid (Updated v1.56)
+                { container: '.main-list-item', title: '.store-main-page-items-list-item-details a' }, // Modern Store Item
+                { container: '.store-main-page-items-list-item-col', title: '.store-main-page-items-list-item-details a' }, // Legacy?
                 // v1.41: Homepage "Results" Grid (e.g. Metro Awakening)
                 { container: '.main-list-results-item-margin', title: 'h3 a' },
                 // v1.42: Product Detail Page (e.g. Resident Evil Requiem)
@@ -140,7 +141,6 @@
                 // Bundle Tiers (Summary Grid)
                 { container: '.bundle-page-tier-item-col', title: '.bundle-page-tier-item-title' },
                 // Homepage / Top Sellers (Generic Fallback)
-                { container: '.main-list-item', title: 'a[href^="/store/game/"]' },
                 { container: '.main-submenu-big-right-item-col', title: 'a[href^="/store/game/"]' },
                 // Library Items
                 { container: 'li.profile-private-page-library-subitem', title: '.profile-private-page-library-subitem-text' },
@@ -1008,6 +1008,7 @@
                         cell.style.paddingBottom = "4px";
                     }
                 } else if (currentConfig.name === 'IndieGala' && (
+                    element.classList.contains('main-list-item') || // v1.56: Standard Store/Bundle Item
                     element.classList.contains('store-main-page-items-list-item-col') ||
                     element.classList.contains('main-list-results-item-margin') ||
                     element.classList.contains('showcase-main-list-item') ||
@@ -1091,61 +1092,62 @@
                     // Fallback if not an IndieGala overlay target
                     nameEl.after(link);
                 }
-            } catch (e) {
-                console.error(e);
-                element.dataset.sslProcessed = "error";
-                if (isNewStats) {
-                    if (!stats.countedSet.has(uniqueId)) { // v1.28
-                        stats.no_data++;
-                        stats.total++;
-                        stats.countedSet.add(uniqueId);
-                        updateStatsUI();
-                    }
-                    element.dataset.sslStatsCounted = "true";
-
+            }
+        } catch (e) {
+            console.error(e);
+            element.dataset.sslProcessed = "error";
+            if (isNewStats) {
+                if (!stats.countedSet.has(uniqueId)) { // v1.28
+                    stats.no_data++;
+                    stats.total++;
+                    stats.countedSet.add(uniqueId);
+                    updateStatsUI();
                 }
+                element.dataset.sslStatsCounted = "true";
+
             }
         }
+    }
 
     function scanPage() {
-            if (currentConfig.isExcluded && currentConfig.isExcluded()) return;
-            if (!currentConfig.selectors) return;
+        if (currentConfig.isExcluded && currentConfig.isExcluded()) return;
+        if (!currentConfig.selectors) return;
 
-            if (DEBUG && currentConfig.name === 'IndieGala') {
-                console.log('[Game Store Enhancer] [DEBUG] Scanning IndieGala page...');
-            }
-
-            // v1.52: IndieGala Age Gate Bypass
-            if (currentConfig.name === 'IndieGala') {
-                const confirmBtn = document.querySelector('a.adult-check-confirm');
-                if (confirmBtn) {
-                    console.log('[Game Store Enhancer] Auto-confirming Age Gate...');
-                    confirmBtn.click();
-                }
-            }
-
-            currentConfig.selectors.forEach(strat => {
-                const elements = document.querySelectorAll(strat.container);
-                if (DEBUG && currentConfig.name === 'IndieGala') {
-                    console.log(`[Game Store Enhancer] [DEBUG] Selector "${strat.container}" found ${elements.length} elements.`);
-                }
-                elements.forEach(el => {
-                    processGameElement(el, strat.title);
-                });
-            });
+        if (DEBUG && currentConfig.name === 'IndieGala') {
+            console.log('[Game Store Enhancer] [DEBUG] Scanning IndieGala page...');
         }
 
-        // --- Observer ---
-        const observer = new MutationObserver((mutations) => {
-            let shouldScan = false;
-            mutations.forEach(m => { if (m.addedNodes.length > 0) shouldScan = true; });
-            if (shouldScan) {
-                if (window.sslScanTimeout) clearTimeout(window.sslScanTimeout);
-                window.sslScanTimeout = setTimeout(scanPage, 500);
+        // v1.52: IndieGala Age Gate Bypass
+        if (currentConfig.name === 'IndieGala') {
+            const confirmBtn = document.querySelector('a.adult-check-confirm');
+            if (confirmBtn) {
+                console.log('[Game Store Enhancer] Auto-confirming Age Gate...');
+                confirmBtn.click();
             }
+        }
+
+        currentConfig.selectors.forEach(strat => {
+            const elements = document.querySelectorAll(strat.container);
+            if (DEBUG && currentConfig.name === 'IndieGala') {
+                console.log(`[Game Store Enhancer] [DEBUG] Selector "${strat.container}" found ${elements.length} elements.`);
+            }
+            elements.forEach(el => {
+                processGameElement(el, strat.title);
+            });
         });
+    }
 
-        observer.observe(document.body, { childList: true, subtree: true });
-        setTimeout(scanPage, 1000);
+    // --- Observer ---
+    const observer = new MutationObserver((mutations) => {
+        let shouldScan = false;
+        mutations.forEach(m => { if (m.addedNodes.length > 0) shouldScan = true; });
+        if (shouldScan) {
+            if (window.sslScanTimeout) clearTimeout(window.sslScanTimeout);
+            window.sslScanTimeout = setTimeout(scanPage, 500);
+        }
+    });
 
-    }) ();
+    observer.observe(document.body, { childList: true, subtree: true });
+    setTimeout(scanPage, 1000);
+
+})();

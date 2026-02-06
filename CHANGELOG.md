@@ -30,6 +30,12 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
   - **Strategy**: Inserted as a *sibling* to the game card link (absolute positioning inside valid relative container) to avoid illegal HTML nesting.
   - **Duplication Fix**: Added strict check to prevent infinite overlay creation loop on Store pages.
 
+## [1.57] - 2026-02-06
+### Fixed
+- **IndieGala**: Fixed syntax error in Store Page selector logic.
+- **IndieGala**: Updated selectors to support v1.56 Store Page layout (`.main-list-item`).
+
+
 
 
 ## [1.51] - 2026-02-06
@@ -59,7 +65,6 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
 ## [1.46] - 2026-02-05
 ### Fixed
 - **Core**: Fixed a critical crash (`ReferenceError: link is not defined`) when processing game results. This prevented links from showing up even if data was found.
-- **Core**: Added missing `@connect` permission for ProtonDB API (`protondb.max-p.me`), fixing connection errors.
 - **Core**: Bumped Cache Version to 2.5 to force a clean slate for debugging.
 
 ## [1.45] - 2026-02-05
