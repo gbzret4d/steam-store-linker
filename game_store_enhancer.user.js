@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      1.57
+// @version      1.58
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -1015,41 +1015,46 @@
                     element.classList.contains('items-list-item') ||
                     element.dataset.sslProcessed !== "true" // Catch-all
                 )) {
-                    // v1.55: Sibling Overlay Strategy
-                    // New Goal: Insert the overlay as a Sibling to the game link/image to avoid illegal nesting.
-                    // This allows us to use a real <A> tag for "Right Click -> Copy Link".
+                    // v1.58: Figure Overlay Strategy
+                    // Goal: Insert overlay INSIDE the <figure> tag to position it directly over the image.
+                    // This creates a consistent look across Store and Bundle pages.
 
                     // 1. Find the Image Container (Figure) and Parent Link
                     const figure = element.querySelector('figure');
-                    // On Bundle pages, the link often wraps the figure or is an overlay itself (.fit-click)
                     const parentLink = element.querySelector('a.fit-click') || element.querySelector('a');
-                    const container = element; // The item container is usually relative
 
-                    if (figure && parentLink) {
+                    // We prefer 'figure' as the anchor. If no figure, valid items usually shouldn't be processed here.
+                    if (figure) {
                         // DUPLICATION CHECK:
-                        // Critical! Check if an overlay already exists in the container to prevents thousands of duplicates.
-                        if (container.querySelector('.ssl-steam-overlay')) {
+                        // Check strictly inside the figure to avoid double insertion.
+                        if (figure.querySelector('.ssl-steam-overlay')) {
                             element.dataset.sslProcessed = "true";
                             return;
                         }
 
-                        // Force relative positioning on the container
-                        container.style.position = 'relative';
+                        // Force relative positioning on the figure so we can absolute-position the overlay inside it.
+                        figure.style.position = 'relative';
+                        figure.style.display = 'block'; // Ensure it's a block context
 
-                        // Create the overlay as a REAL LINK (<a>)
-                        const overlay = document.createElement('a');
+                        // Create the overlay
+                        const overlay = document.createElement('a'); // Use <a> for Right-Click support
                         overlay.className = 'ssl-steam-overlay';
-                        overlay.href = link.href; // Now fully functional
+                        overlay.href = link.href;
                         overlay.target = '_blank';
 
-                        // Strict Styling
+                        // Strict Styling for Image Overlay
                         overlay.style.position = 'absolute';
-                        overlay.style.bottom = '0';
+                        overlay.style.bottom = '0'; // Align to bottom of image
                         overlay.style.left = '0';
                         overlay.style.width = '100%';
-                        overlay.style.zIndex = '20'; // Above the game link
-                        overlay.style.display = 'flex'; // Ensure flexbox works for content
-                        overlay.style.pointerEvents = 'auto'; // Ensure it catches clicks
+                        overlay.style.padding = '2px 0'; // Slight padding
+                        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)'; // Semi-transparent background for readability
+                        overlay.style.zIndex = '20'; // Critical: Must be > 10 (fit-click z-index)
+                        overlay.style.display = 'flex';
+                        overlay.style.alignItems = 'center';
+                        overlay.style.justifyContent = 'center'; // Center content
+                        overlay.style.pointerEvents = 'auto'; // Catch clicks clearly
+                        overlay.style.textDecoration = 'none'; // No underline
 
                         // Build Content
                         let reviewSnippet = '';
@@ -1057,39 +1062,20 @@
                             let color = '#a8926a'; // Mixed
                             if (parseInt(appData.reviews.percent) >= 70) color = '#66C0F4'; // Blue
                             if (parseInt(appData.reviews.percent) < 40) color = '#c15755'; // Red
-                            reviewSnippet = ` <span style="color:${color}; margin-left:5px;">${appData.reviews.percent}%</span>`;
+                            reviewSnippet = ` <span style="color:${color}; margin-left:5px; font-weight:bold; font-size:11px;">${appData.reviews.percent}%</span>`;
                         }
 
-                        overlay.innerHTML = `<img src="https://store.steampowered.com/favicon.ico" class="ssl-icon-img" style="width:14px;height:14px;vertical-align:text-top;"> STEAM${reviewSnippet}`;
+                        overlay.innerHTML = `<img src="https://store.steampowered.com/favicon.ico" class="ssl-icon-img" style="width:14px;height:14px;vertical-align:middle; margin-right:4px;"> <span style="color:#fff; font-size:11px; font-weight:bold;">STEAM</span>${reviewSnippet}`;
 
-                        // INSERTION STRATEGY:
-                        // Append to the container (sibling to the link/figure)
-                        // Since 'container' is relative and wraps the link, this overlay will sit on top.
-                        container.appendChild(overlay);
-
-                    } else if (figure) {
-                        // Fallback for non-link cards (rare)
-                        if (figure.querySelector('.ssl-steam-overlay')) return;
-                        figure.style.position = 'relative';
-                        figure.style.display = 'block';
-
-                        const overlay = document.createElement('div');
-                        overlay.className = 'ssl-steam-overlay';
-                        overlay.innerHTML = `<img src="https://store.steampowered.com/favicon.ico" class="ssl-icon-img" style="width:14px;height:14px;vertical-align:text-top;"> STEAM`;
-                        overlay.style.position = 'absolute';
-                        overlay.style.bottom = '0';
-                        overlay.style.left = '0';
-                        overlay.style.width = '100%';
-                        overlay.style.zIndex = '20';
-                        overlay.style.cursor = "pointer";
-                        overlay.onclick = () => window.open(link.href, '_blank');
+                        // INSERTION: Append to FIGURE
                         figure.appendChild(overlay);
+
                     } else {
-                        // Fallback if no figure found
+                        // Fallback: If no figure found (should be rare for these selectors), utilize fallback placement
                         nameEl.after(link);
                     }
                 } else {
-                    // Fallback if not an IndieGala overlay target
+                    // Fallback for non-IndieGala/Standard flow
                     nameEl.after(link);
                 }
             }

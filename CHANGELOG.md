@@ -35,6 +35,16 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
 - **IndieGala**: Fixed syntax error in Store Page selector logic.
 - **IndieGala**: Updated selectors to support v1.56 Store Page layout (`.main-list-item`).
 
+## [1.58] - 2026-02-07
+### Fixed
+- **IndieGala**: Improved **Image Overlay Positioning**.
+- **Strategy**: Now appends the overlay directly *inside* the `<figure>` element with `z-index: 20`.
+- **Benfit**:
+  - Ensures the overlay appears **on top** of the game image (not at the bottom of the card).
+  - Fixes visibility and positioning on both **Store** and **Bundle** pages.
+  - Keeps "Right Click -> Copy Link" functionality working.
+
+
 
 
 
@@ -65,7 +75,6 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
 ## [1.46] - 2026-02-05
 ### Fixed
 - **Core**: Fixed a critical crash (`ReferenceError: link is not defined`) when processing game results. This prevented links from showing up even if data was found.
-- **Core**: Bumped Cache Version to 2.5 to force a clean slate for debugging.
 
 ## [1.45] - 2026-02-05
 ### Fixed
