@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      2.0.1
+// @version      2.0.2
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -146,6 +146,8 @@
                 { container: '.dev-cover-text-col', title: 'h1' }, // Another potential container
                 // Bundle Tiers (Summary Grid)
                 { container: '.bundle-page-tier-item-col', title: '.bundle-page-tier-item-title' },
+                // v2.0.2: Bundle Page Slider (Carousel)
+                { container: '.bundle-slider-game-info', title: '.bundle-slider-game-info-title' },
                 // Homepage / Top Sellers (Generic Fallback)
                 { container: '.main-submenu-big-right-item-col', title: 'a[href^="/store/game/"]' },
                 // v1.59: Homepage "Top Sellers" List
