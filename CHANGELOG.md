@@ -50,6 +50,12 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
   - Detects the list items on the homepage.
   - Inserts a **Steam Badge** (Icon + Review Score) directly next to the platform logos (Steam/Windows/Apple).
 
+## [1.60] - 2026-02-07
+### Fixed
+- **IndieGala**: Fixed "Black Bar" artifact in Owned game highlighting (caused by global CSS bleeding).
+- **IndieGala**: Fixed Overlay vs Badge priority on Homepage items (Badge now correctly appears next to icons).
+
+
 
 
 

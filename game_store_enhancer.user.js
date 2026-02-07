@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      1.59
+// @version      1.60
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -318,7 +318,7 @@
         /* Note: We use border-bottom on the container to simulate a gap because standard margins don't work on TR/TD well without collapsing */
         .ssl-container-owned {
             border: 4px solid #a4d007 !important;
-            border-bottom: 8px solid #1a1c1d !important; /* Gap Simulation */
+            ${currentConfig.name === 'DailyIndieGame' ? 'border-bottom: 8px solid #1a1c1d !important;' : ''} /* Gap Simulation (DIG Only) */
             background-color: rgba(76, 107, 34, 0.3) !important; 
             box-shadow: inset 0 0 20px rgba(164, 208, 7, 0.4);
             box-sizing: border-box !important;
@@ -349,7 +349,7 @@
         }
         .ssl-container-wishlist {
             border: 4px solid #66c0f4 !important;
-            border-bottom: 8px solid #1a1c1d !important; /* Gap Simulation */
+            ${currentConfig.name === 'DailyIndieGame' ? 'border-bottom: 8px solid #1a1c1d !important;' : ''}
             background-color: rgba(59, 110, 140, 0.3) !important;
             box-shadow: inset 0 0 20px rgba(102, 192, 244, 0.4);
             box-sizing: border-box !important;
@@ -358,7 +358,7 @@
         }
         .ssl-container-ignored {
             border: 4px solid #d9534f !important;
-            border-bottom: 8px solid #1a1c1d !important; /* Gap Simulation */
+            ${currentConfig.name === 'DailyIndieGame' ? 'border-bottom: 8px solid #1a1c1d !important;' : ''}
             background-color: rgba(90, 90, 90, 0.3) !important;
             box-shadow: inset 0 0 10px rgba(217, 83, 79, 0.4);
             box-sizing: border-box !important;
@@ -1017,15 +1017,50 @@
                     element.classList.contains('items-list-item') ||
                     element.dataset.sslProcessed !== "true" // Catch-all
                 )) {
-                    // v1.59: Hybrid Strategy for IndieGala
-                    // Strategy A: Figure Overlay (Store Grids, Bundles) -> High Visibility on Image
-                    // Strategy B: Platform Container (Homepage Lists) -> Inline with existing icons
+                    // v1.60: Hybrid Strategy & Priority Fix
+                    // Strategy A: Platform Container (Homepage Lists) -> Inline with existing icons (Preferred if available)
+                    // Strategy B: Figure Overlay (Store Grids, Bundles) -> High Visibility on Image
 
                     const figure = element.querySelector('figure');
                     const platformContainer = element.querySelector('.item-platforms'); // Homepage "Top Sellers" container
 
-                    if (figure) {
-                        // --- STRATEGY A: FIGURE OVERLAY (Store/Bundles) ---
+                    if (platformContainer) {
+                        // --- STRATEGY A: PLATFORM CONTAINER (Homepage Lists) ---
+                        // Insert as a small badge NEXT to the existing icons (Steam/Windows/Apple)
+
+                        // DUPLICATION CHECK:
+                        if (platformContainer.querySelector('.ssl-steam-badge')) {
+                            element.dataset.sslProcessed = "true";
+                            return;
+                        }
+
+                        const badge = document.createElement('a');
+                        badge.className = 'ssl-steam-badge';
+                        badge.href = link.href;
+                        badge.target = '_blank';
+                        badge.title = "View on Steam";
+
+                        // Style to match icons
+                        badge.style.display = 'inline-flex';
+                        badge.style.alignItems = 'center';
+                        badge.style.marginLeft = '10px';
+                        badge.style.textDecoration = 'none';
+                        badge.style.verticalAlign = 'middle';
+
+                        let reviewText = '';
+                        if (appData && appData.reviews && appData.reviews.percent) {
+                            let color = '#a8926a';
+                            if (parseInt(appData.reviews.percent) >= 70) color = '#66C0F4';
+                            if (parseInt(appData.reviews.percent) < 40) color = '#c15755';
+                            reviewText = `<span style="color:${color}; font-weight:bold; font-size:12px; margin-left:4px;">${appData.reviews.percent}%</span>`;
+                        }
+
+                        badge.innerHTML = `<img src="https://store.steampowered.com/favicon.ico" style="width:16px;height:16px;vertical-align:middle;">${reviewText}`;
+
+                        platformContainer.appendChild(badge);
+
+                    } else if (figure) {
+                        // --- STRATEGY B: FIGURE OVERLAY (Store/Bundles) ---
                         // DUPLICATION CHECK:
                         if (figure.querySelector('.ssl-steam-overlay')) {
                             element.dataset.sslProcessed = "true";
@@ -1063,41 +1098,6 @@
 
                         overlay.innerHTML = `<img src="https://store.steampowered.com/favicon.ico" class="ssl-icon-img" style="width:14px;height:14px;vertical-align:middle; margin-right:4px;"> <span style="color:#fff; font-size:11px; font-weight:bold;">STEAM</span>${reviewSnippet}`;
                         figure.appendChild(overlay);
-
-                    } else if (platformContainer) {
-                        // --- STRATEGY B: PLATFORM CONTAINER (Homepage Lists) ---
-                        // Insert as a small badge NEXT to the existing icons (Steam/Windows/Apple)
-
-                        // DUPLICATION CHECK:
-                        if (platformContainer.querySelector('.ssl-steam-badge')) {
-                            element.dataset.sslProcessed = "true";
-                            return;
-                        }
-
-                        const badge = document.createElement('a');
-                        badge.className = 'ssl-steam-badge';
-                        badge.href = link.href;
-                        badge.target = '_blank';
-                        badge.title = "View on Steam";
-
-                        // Style to match icons
-                        badge.style.display = 'inline-flex';
-                        badge.style.alignItems = 'center';
-                        badge.style.marginLeft = '10px';
-                        badge.style.textDecoration = 'none';
-                        badge.style.verticalAlign = 'middle';
-
-                        let reviewText = '';
-                        if (appData && appData.reviews && appData.reviews.percent) {
-                            let color = '#a8926a';
-                            if (parseInt(appData.reviews.percent) >= 70) color = '#66C0F4';
-                            if (parseInt(appData.reviews.percent) < 40) color = '#c15755';
-                            reviewText = `<span style="color:${color}; font-weight:bold; font-size:12px; margin-left:4px;">${appData.reviews.percent}%</span>`;
-                        }
-
-                        badge.innerHTML = `<img src="https://store.steampowered.com/favicon.ico" style="width:16px;height:16px;vertical-align:middle;">${reviewText}`;
-
-                        platformContainer.appendChild(badge);
 
                     } else {
                         // Fallback: If neither Strategy fits
