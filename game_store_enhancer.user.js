@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      2.0.11
+// @version      2.0.12
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -327,6 +327,22 @@
             background-color: rgba(217, 83, 79, 0.2);
             box-shadow: 0 0 5px rgba(217, 83, 79, 0.4);
             display: inline-block; /* Ensure box model works */
+            margin: 4px 0 !important; /* v2.0.12: Spacing fix */
+        }
+
+        /* v2.0.12: Bundle Wishlist Indicator */
+        .ssl-wishlist-dot {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 12px;
+            height: 12px;
+            background-color: #66c0f4; /* Steam Blue */
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            z-index: 30;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+            pointer-events: none;
         }
 
         .ssl-review-positive { color: #66C0F4; font-weight: bold; } /* Blue for positive */
@@ -1266,6 +1282,90 @@
                 processGameElement(el, strat.title, strat.forceSimple, strat.externalTitle);
             });
         });
+
+        // v2.0.12: Scan Bundle Overview (Scraping)
+        if (currentConfig.name === 'IndieGala' && window.location.href.includes('/bundles')) {
+            scanBundlesOverview();
+        }
+    }
+
+    // v2.0.12: Fetch Bundle Pages to check for Wishlisted games
+    function scanBundlesOverview() {
+        const bundleCards = document.querySelectorAll('.container-item-click-cover');
+        bundleCards.forEach(card => {
+            if (card.dataset.sslProcessed) return;
+            // Mark as processed (fetching)
+            card.dataset.sslProcessed = "fetching";
+
+            const bundleUrl = card.href;
+            if (!bundleUrl) return;
+
+            // Use the existing cache/store logic? 
+            // We'll use a simple GM cache for "BundleID -> HasWishlist" to avoid re-scraping too often.
+            const bundleId = bundleUrl.split('/').pop();
+            const cacheKey = `ssl_bundle_wishlist_${bundleId}`;
+            const cached = getStoredValue(cacheKey, null);
+
+            if (cached && (Date.now() - cached.timestamp < CACHE_TTL * 4)) { // 1 Hour Cache
+                if (cached.hasWishlist) injectWishlistDot(card);
+                card.dataset.sslProcessed = "true";
+                return;
+            }
+
+            // Add to queue
+            steamQueue.add(() => new Promise(resolve => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: bundleUrl,
+                    onload: (res) => {
+                        try {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(res.responseText, "text/html");
+                            // Extract IDs from Bundle Page
+                            // Pattern 1: Bundle Images
+                            const images = Array.from(doc.querySelectorAll('img[src*="/bundle_games/"]'));
+                            const idsFromImages = images.map(img => {
+                                const m = img.src.match(/\/(\\d+)\\.jpg/);
+                                return m ? m[1] : null;
+                            }).filter(Boolean);
+
+                            // Pattern 2: Steam Links
+                            const links = Array.from(doc.querySelectorAll('a[href*="store.steampowered.com/app/"]'));
+                            const idsFromLinks = links.map(l => {
+                                const m = l.href.match(/\/app\/(\\d+)/);
+                                return m ? m[1] : null;
+                            }).filter(Boolean);
+
+                            const allIds = [...new Set([...idsFromImages, ...idsFromLinks])];
+
+                            // Check Wishlist
+                            fetchSteamUserData().then(userData => {
+                                const wishlist = userData?.wishlist || [];
+                                const hasWishlist = allIds.some(id => wishlist.includes(parseInt(id)) || wishlist.includes(String(id)));
+
+                                if (hasWishlist) injectWishlistDot(card);
+
+                                setStoredValue(cacheKey, { hasWishlist, timestamp: Date.now() });
+                                card.dataset.sslProcessed = "true";
+                                resolve();
+                            });
+
+                        } catch (e) { console.error("Bundle Parse Error", e); resolve(); }
+                    },
+                    onerror: () => resolve()
+                });
+            }));
+        });
+    }
+
+    function injectWishlistDot(cardLink) {
+        const relativeParent = cardLink.closest('.relative'); // The card container
+        if (relativeParent && !relativeParent.querySelector('.ssl-wishlist-dot')) {
+            const dot = document.createElement('div');
+            dot.className = 'ssl-wishlist-dot';
+            dot.title = "Contains Wishlisted Game!";
+            relativeParent.appendChild(dot);
+        }
     }
 
     // --- Observer ---
