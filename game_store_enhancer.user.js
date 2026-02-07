@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      2.0.15
+// @version      2.0.16
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -1290,20 +1290,27 @@
         // v2.0.14: Add specific styles for IndieGala bundle pages
         // This is added here because it's specific to IndieGala and needs to be applied once.
         GM_addStyle(`
-        /* v2.0.14: Spacing fix for IndieGala Bundle Page - Apply border to inner container with margin */
+        /* v2.0.16: Spacing fix for IndieGala Bundle Page - Apply styling ONLY to the cover image */
+        .ssl-container-ignored .bundle-page-tier-item-col {
+            border: none !important;
+            padding: 0 5px !important; /* Reset/Ensure default padding */
+        }
         .ssl-container-ignored .bundle-page-tier-item-outer {
+            border: none !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+        }
+        .ssl-container-ignored .bundle-page-tier-item-cover {
             border: 4px solid #d9534f !important;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(217, 83, 79, 0.4);
-            margin: 8px !important; /* Add spacing between items */
-            width: auto !important; /* Ensure margin doesn't break width */
+            border-radius: 6px;
+            opacity: 0.6; /* Dim the ignored game image */
         }
         
-        /* v2.0.14: Bundle Wishlist Indicator - Blue Border around entire card */
+        /* v2.0.16: Bundle Wishlist Indicator - Inset Shadow to prevent clipping */
         .ssl-bundle-wishlisted {
-            border: 4px solid #66c0f4 !important; /* Steam Blue */
-            border-radius: 20px !important;
-            box-shadow: 0 0 15px rgba(102, 192, 244, 0.6);
+            border: none !important;
+            /* Inset shadow draws INSIDE the element, so it won't be clipped by overflow:hidden */
+            box-shadow: inset 0 0 0 4px #66c0f4, 0 0 15px rgba(102, 192, 244, 0.6) !important; 
             /* Ensure detection on dark backgrounds */
             z-index: 10; 
         }
