@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      2.0.13
+// @version      2.0.14
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -328,6 +328,20 @@
             box-shadow: 0 0 5px rgba(217, 83, 79, 0.4);
             display: inline-block; /* Ensure box model works */
             margin: 4px 0 !important; /* v2.0.12: Spacing fix */
+        }
+
+        /* v2.0.14: Spacing fix for IndieGala Bundle Page - Apply border to inner container */
+        .ssl-container-ignored .bundle-page-tier-item-outer {
+            border: 4px solid #d9534f !important;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(217, 83, 79, 0.4);
+        }
+        
+        /* v2.0.14: Bundle Wishlist Indicator - Blue Border around entire card */
+        .ssl-bundle-wishlisted {
+            border: 4px solid #66c0f4 !important; /* Steam Blue */
+            border-radius: 20px !important;
+            box-shadow: 0 0 10px rgba(102, 192, 244, 0.6);
         }
 
         /* v2.0.12: Bundle Wishlist Indicator */
@@ -1342,7 +1356,7 @@
                                 const wishlist = userData?.wishlist || [];
                                 const hasWishlist = Array.from(allIds).some(id => wishlist.includes(parseInt(id)) || wishlist.includes(String(id)));
 
-                                if (hasWishlist) injectWishlistDot(card);
+                                if (hasWishlist) markBundleAsWishlisted(card);
 
                                 setStoredValue(cacheKey, { hasWishlist, timestamp: Date.now() });
                                 card.dataset.sslProcessed = "true";
@@ -1357,13 +1371,11 @@
         });
     }
 
-    function injectWishlistDot(cardLink) {
+    function markBundleAsWishlisted(cardLink) {
+        // v2.0.14: Apply blue border to the card container instead of a dot
         const relativeParent = cardLink.closest('.relative'); // The card container
-        if (relativeParent && !relativeParent.querySelector('.ssl-wishlist-dot')) {
-            const dot = document.createElement('div');
-            dot.className = 'ssl-wishlist-dot';
-            dot.title = "Contains Wishlisted Game!";
-            relativeParent.appendChild(dot);
+        if (relativeParent) {
+            relativeParent.classList.add('ssl-bundle-wishlisted');
         }
     }
 
