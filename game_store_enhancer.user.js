@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      2.0.14
+// @version      2.0.15
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -1287,6 +1287,34 @@
             }
         }
 
+        // v2.0.14: Add specific styles for IndieGala bundle pages
+        // This is added here because it's specific to IndieGala and needs to be applied once.
+        GM_addStyle(`
+        /* v2.0.14: Spacing fix for IndieGala Bundle Page - Apply border to inner container with margin */
+        .ssl-container-ignored .bundle-page-tier-item-outer {
+            border: 4px solid #d9534f !important;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(217, 83, 79, 0.4);
+            margin: 8px !important; /* Add spacing between items */
+            width: auto !important; /* Ensure margin doesn't break width */
+        }
+        
+        /* v2.0.14: Bundle Wishlist Indicator - Blue Border around entire card */
+        .ssl-bundle-wishlisted {
+            border: 4px solid #66c0f4 !important; /* Steam Blue */
+            border-radius: 20px !important;
+            box-shadow: 0 0 15px rgba(102, 192, 244, 0.6);
+            /* Ensure detection on dark backgrounds */
+            z-index: 10; 
+        }
+
+        /* v2.0.12: Bundle Wishlist Indicator */
+        .ssl-wishlist-dot {
+            display: none !important;
+        }
+    `);
+
+
         currentConfig.selectors.forEach(strat => {
             const elements = document.querySelectorAll(strat.container);
             if (DEBUG && currentConfig.name === 'IndieGala') {
@@ -1305,13 +1333,20 @@
 
     // v2.0.12: Fetch Bundle Pages to check for Wishlisted games
     function scanBundlesOverview() {
-        const bundleCards = document.querySelectorAll('.container-item-click-cover');
-        bundleCards.forEach(card => {
-            if (card.dataset.sslProcessed) return;
-            // Mark as processed (fetching)
-            card.dataset.sslProcessed = "fetching";
+        // v2.0.14: Updated selector to target the main card container
+        const bundleCards = document.querySelectorAll('.container-item');
 
-            const bundleUrl = card.href;
+        bundleCards.forEach(cardContainer => {
+            if (cardContainer.dataset.sslProcessed) return;
+
+            // Find the link
+            const link = cardContainer.querySelector('a.container-item-click-cover') || cardContainer.querySelector('a[href^="/bundle/"]');
+            if (!link) return;
+
+            // Mark as processed (fetching)
+            cardContainer.dataset.sslProcessed = "fetching";
+
+            const bundleUrl = link.href;
             if (!bundleUrl) return;
 
             // Use the existing cache/store logic? 
@@ -1321,8 +1356,8 @@
             const cached = getStoredValue(cacheKey, null);
 
             if (cached && (Date.now() - cached.timestamp < CACHE_TTL * 4)) { // 1 Hour Cache
-                if (cached.hasWishlist) injectWishlistDot(card);
-                card.dataset.sslProcessed = "true";
+                if (cached.hasWishlist) markBundleAsWishlisted(cardContainer);
+                cardContainer.dataset.sslProcessed = "true";
                 return;
             }
 
@@ -1338,7 +1373,6 @@
                             const allIds = new Set();
 
                             // Pattern 1: IndieGala Bundle Images (e.g. /bundle_games/yyyymmdd/12345.jpg)
-                            // Source can be src or data-src
                             const imageMatches = html.matchAll(/\/bundle_games\/\d+\/(\d+)\.jpg/g);
                             for (const m of imageMatches) allIds.add(m[1]);
 
@@ -1347,7 +1381,6 @@
                             for (const m of linkMatches) allIds.add(m[1]);
 
                             // Pattern 3: Steam Capsule/Header Images (often used in carousels)
-                            // e.g. apps/12345/header.jpg
                             const capMatches = html.matchAll(/steam\/apps\/(\d+)\//g);
                             for (const m of capMatches) allIds.add(m[1]);
 
@@ -1356,10 +1389,10 @@
                                 const wishlist = userData?.wishlist || [];
                                 const hasWishlist = Array.from(allIds).some(id => wishlist.includes(parseInt(id)) || wishlist.includes(String(id)));
 
-                                if (hasWishlist) markBundleAsWishlisted(card);
+                                if (hasWishlist) markBundleAsWishlisted(cardContainer);
 
                                 setStoredValue(cacheKey, { hasWishlist, timestamp: Date.now() });
-                                card.dataset.sslProcessed = "true";
+                                cardContainer.dataset.sslProcessed = "true";
                                 resolve();
                             });
 
@@ -1371,11 +1404,14 @@
         });
     }
 
-    function markBundleAsWishlisted(cardLink) {
-        // v2.0.14: Apply blue border to the card container instead of a dot
-        const relativeParent = cardLink.closest('.relative'); // The card container
-        if (relativeParent) {
-            relativeParent.classList.add('ssl-bundle-wishlisted');
+    function markBundleAsWishlisted(cardContainer) {
+        // v2.0.14: Apply blue border to the inner card container
+        const inner = cardContainer.querySelector('.container-item-inner');
+        if (inner) {
+            inner.classList.add('ssl-bundle-wishlisted');
+        } else {
+            // Fallback to container if inner not found
+            cardContainer.classList.add('ssl-bundle-wishlisted');
         }
     }
 
