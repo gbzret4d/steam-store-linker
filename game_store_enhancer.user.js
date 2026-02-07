@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      2.0.6
+// @version      2.0.7
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -822,7 +822,7 @@
 
     let userDataPromise = fetchSteamUserData();
 
-    async function processGameElement(element, nameSelector) {
+    async function processGameElement(element, nameSelector, forceSimpleArg) {
         // v1.27: Visibility Check - Fixes double-counting on Bundle pages (hidden tiers/mobile views)
         if (element.offsetParent === null) return;
 
@@ -839,8 +839,8 @@
 
         if (element.dataset.sslProcessed) return;
 
-        // v2.0.5: Fix ReferenceErrors
-        const forceSimple = currentConfig.forceSimple || false;
+        // v2.0.7: Fix forceSimple not being passed correctly
+        const forceSimple = forceSimpleArg || false;
         const selectorToUse = nameSelector || currentConfig.title; // Fallback to config if not passed
 
         let nameEl = element.querySelector(selectorToUse);
