@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      2.0.2
+// @version      2.0.3
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -140,10 +140,10 @@
                 // v1.41: Homepage "Results" Grid (e.g. Metro Awakening)
                 { container: '.main-list-results-item-margin', title: 'h3 a' },
                 // v1.42: Product Detail Page (e.g. Resident Evil Requiem)
-                { container: '.store-product-header-flex', title: 'h1[itemprop="name"]' },
+                { container: '.store-product-header-flex', title: 'h1[itemprop="name"]', forceSimple: true },
                 // v1.47: Fallback Product Page
-                { container: '.store-product-page-content', title: 'h1' },
-                { container: '.dev-cover-text-col', title: 'h1' }, // Another potential container
+                { container: '.store-product-page-content', title: 'h1', forceSimple: true },
+                { container: '.dev-cover-text-col', title: 'h1', forceSimple: true }, // Another potential container
                 // Bundle Tiers (Summary Grid)
                 { container: '.bundle-page-tier-item-col', title: '.bundle-page-tier-item-title' },
                 // v2.0.2: Bundle Page Slider (Carousel)
@@ -837,7 +837,23 @@
 
         if (element.dataset.sslProcessed) return;
 
-        const nameEl = element.querySelector(nameSelector);
+        // v1.61: Performance Optimization - Skip if already processed
+        // We check a data attribute on the container itself
+        if (element.dataset.sslProcessed) return;
+
+        let nameEl = element.querySelector(titleSelector);
+        if (!nameEl) return;
+
+        // v1.58: Fix Overlay Positioning - Ensure we have a valid container for relative positioning
+        // Strategy:
+        // 1. Look for a `figure` or `.main-list-item-col-image` for overlay
+        // 2. Fallback to `nameEl` for simple link
+
+        // Determine Strategy
+        let figure = null;
+        if (!forceSimple) {
+            figure = element.querySelector('.main-list-item-col-image') || element.querySelector('figure') || element.querySelector('.product-image');
+        }
 
         // v1.35: Deduplication Check - Prevent multiple badges
         if (element.querySelector('.ssl-link')) {
@@ -1197,7 +1213,7 @@
                 console.log(`[Game Store Enhancer] [DEBUG] Selector "${strat.container}" found ${elements.length} elements.`);
             }
             elements.forEach(el => {
-                processGameElement(el, strat.title);
+                processGameElement(el, strat.title, strat.forceSimple);
             });
         });
     }
