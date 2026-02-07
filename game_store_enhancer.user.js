@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      1.58
+// @version      1.59
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -142,6 +142,8 @@
                 { container: '.bundle-page-tier-item-col', title: '.bundle-page-tier-item-title' },
                 // Homepage / Top Sellers (Generic Fallback)
                 { container: '.main-submenu-big-right-item-col', title: 'a[href^="/store/game/"]' },
+                // v1.59: Homepage "Top Sellers" List
+                { container: '.item-inner', title: '.item-title-span' },
                 // Library Items
                 { container: 'li.profile-private-page-library-subitem', title: '.profile-private-page-library-subitem-text' },
                 // Giveaways
@@ -1015,63 +1017,90 @@
                     element.classList.contains('items-list-item') ||
                     element.dataset.sslProcessed !== "true" // Catch-all
                 )) {
-                    // v1.58: Figure Overlay Strategy
-                    // Goal: Insert overlay INSIDE the <figure> tag to position it directly over the image.
-                    // This creates a consistent look across Store and Bundle pages.
+                    // v1.59: Hybrid Strategy for IndieGala
+                    // Strategy A: Figure Overlay (Store Grids, Bundles) -> High Visibility on Image
+                    // Strategy B: Platform Container (Homepage Lists) -> Inline with existing icons
 
-                    // 1. Find the Image Container (Figure) and Parent Link
                     const figure = element.querySelector('figure');
-                    const parentLink = element.querySelector('a.fit-click') || element.querySelector('a');
+                    const platformContainer = element.querySelector('.item-platforms'); // Homepage "Top Sellers" container
 
-                    // We prefer 'figure' as the anchor. If no figure, valid items usually shouldn't be processed here.
                     if (figure) {
+                        // --- STRATEGY A: FIGURE OVERLAY (Store/Bundles) ---
                         // DUPLICATION CHECK:
-                        // Check strictly inside the figure to avoid double insertion.
                         if (figure.querySelector('.ssl-steam-overlay')) {
                             element.dataset.sslProcessed = "true";
                             return;
                         }
 
-                        // Force relative positioning on the figure so we can absolute-position the overlay inside it.
                         figure.style.position = 'relative';
-                        figure.style.display = 'block'; // Ensure it's a block context
+                        figure.style.display = 'block';
 
-                        // Create the overlay
-                        const overlay = document.createElement('a'); // Use <a> for Right-Click support
+                        const overlay = document.createElement('a');
                         overlay.className = 'ssl-steam-overlay';
                         overlay.href = link.href;
                         overlay.target = '_blank';
 
-                        // Strict Styling for Image Overlay
                         overlay.style.position = 'absolute';
-                        overlay.style.bottom = '0'; // Align to bottom of image
+                        overlay.style.bottom = '0';
                         overlay.style.left = '0';
                         overlay.style.width = '100%';
-                        overlay.style.padding = '2px 0'; // Slight padding
-                        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)'; // Semi-transparent background for readability
-                        overlay.style.zIndex = '20'; // Critical: Must be > 10 (fit-click z-index)
+                        overlay.style.padding = '2px 0';
+                        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                        overlay.style.zIndex = '20';
                         overlay.style.display = 'flex';
                         overlay.style.alignItems = 'center';
-                        overlay.style.justifyContent = 'center'; // Center content
-                        overlay.style.pointerEvents = 'auto'; // Catch clicks clearly
-                        overlay.style.textDecoration = 'none'; // No underline
+                        overlay.style.justifyContent = 'center';
+                        overlay.style.pointerEvents = 'auto';
+                        overlay.style.textDecoration = 'none';
 
-                        // Build Content
                         let reviewSnippet = '';
                         if (appData && appData.reviews && appData.reviews.percent) {
-                            let color = '#a8926a'; // Mixed
-                            if (parseInt(appData.reviews.percent) >= 70) color = '#66C0F4'; // Blue
-                            if (parseInt(appData.reviews.percent) < 40) color = '#c15755'; // Red
+                            let color = '#a8926a';
+                            if (parseInt(appData.reviews.percent) >= 70) color = '#66C0F4';
+                            if (parseInt(appData.reviews.percent) < 40) color = '#c15755';
                             reviewSnippet = ` <span style="color:${color}; margin-left:5px; font-weight:bold; font-size:11px;">${appData.reviews.percent}%</span>`;
                         }
 
                         overlay.innerHTML = `<img src="https://store.steampowered.com/favicon.ico" class="ssl-icon-img" style="width:14px;height:14px;vertical-align:middle; margin-right:4px;"> <span style="color:#fff; font-size:11px; font-weight:bold;">STEAM</span>${reviewSnippet}`;
-
-                        // INSERTION: Append to FIGURE
                         figure.appendChild(overlay);
 
+                    } else if (platformContainer) {
+                        // --- STRATEGY B: PLATFORM CONTAINER (Homepage Lists) ---
+                        // Insert as a small badge NEXT to the existing icons (Steam/Windows/Apple)
+
+                        // DUPLICATION CHECK:
+                        if (platformContainer.querySelector('.ssl-steam-badge')) {
+                            element.dataset.sslProcessed = "true";
+                            return;
+                        }
+
+                        const badge = document.createElement('a');
+                        badge.className = 'ssl-steam-badge';
+                        badge.href = link.href;
+                        badge.target = '_blank';
+                        badge.title = "View on Steam";
+
+                        // Style to match icons
+                        badge.style.display = 'inline-flex';
+                        badge.style.alignItems = 'center';
+                        badge.style.marginLeft = '10px';
+                        badge.style.textDecoration = 'none';
+                        badge.style.verticalAlign = 'middle';
+
+                        let reviewText = '';
+                        if (appData && appData.reviews && appData.reviews.percent) {
+                            let color = '#a8926a';
+                            if (parseInt(appData.reviews.percent) >= 70) color = '#66C0F4';
+                            if (parseInt(appData.reviews.percent) < 40) color = '#c15755';
+                            reviewText = `<span style="color:${color}; font-weight:bold; font-size:12px; margin-left:4px;">${appData.reviews.percent}%</span>`;
+                        }
+
+                        badge.innerHTML = `<img src="https://store.steampowered.com/favicon.ico" style="width:16px;height:16px;vertical-align:middle;">${reviewText}`;
+
+                        platformContainer.appendChild(badge);
+
                     } else {
-                        // Fallback: If no figure found (should be rare for these selectors), utilize fallback placement
+                        // Fallback: If neither Strategy fits
                         nameEl.after(link);
                     }
                 } else {

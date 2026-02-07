@@ -44,6 +44,13 @@ All notable changes to the **Game Store Enhancer** userscript will be documented
   - Fixes visibility and positioning on both **Store** and **Bundle** pages.
   - Keeps "Right Click -> Copy Link" functionality working.
 
+## [1.59] - 2026-02-07
+### Added
+- **IndieGala**: Added support for **Homepage / Top Sellers** list.
+  - Detects the list items on the homepage.
+  - Inserts a **Steam Badge** (Icon + Review Score) directly next to the platform logos (Steam/Windows/Apple).
+
+
 
 
 
