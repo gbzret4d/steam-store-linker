@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      2.0.0
+// @version      2.0.1
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -130,7 +130,13 @@
             selectors: [
                 // Store / Sales Grid (Updated v1.56)
                 { container: '.main-list-item', title: '.store-main-page-items-list-item-details a' }, // Modern Store Item
+                // v2.0: Verified Store Grid Selector (Live Analysis)
+                { container: '.main-list-results-item', title: '.main-list-results-item-info h3' },
+                // Store / Sales Grid (Updated v1.56)
+                { container: '.main-list-item', title: '.store-main-page-items-list-item-details a' }, // Modern Store Item
                 { container: '.store-main-page-items-list-item-col', title: '.store-main-page-items-list-item-details a' }, // Legacy?
+                // v2.0: Generic Store Grid Fallback (Broadest match)
+                { container: '.store-main-page-items-list-item-col', title: '.item-title' },
                 // v1.41: Homepage "Results" Grid (e.g. Metro Awakening)
                 { container: '.main-list-results-item-margin', title: 'h3 a' },
                 // v1.42: Product Detail Page (e.g. Resident Evil Requiem)
