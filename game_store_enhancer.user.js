@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      2.0.26
+// @version      2.0.27
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -1530,23 +1530,8 @@
     observer.observe(document.body, { childList: true, subtree: true });
 
     // v2.0.25: Dedicated Bundle Scanner (Replacement)
-    // v2.0.25: Search Wrapper (Missing Function Fix)
-    async function searchSteam(title, container, type, isNewStatsOverride) {
-        const result = await searchSteamGame(title);
-        if (result && result.id) {
-            handleSteamApp(result.id, container, title, type, isNewStatsOverride);
-        } else if (isNewStatsOverride) {
-            // v2.0.26: Count "No Data" results so Total is accurate
-            // We need to ensure uniqueId to prevent double counting if re-scanned? 
-            // searchSteam is usually called only once per unique container due to dataset.sslScanned
-            stats.no_data++;
-            stats.total++;
-            updateStatsUI();
-
-            // Should we mark container as error?
-            container.dataset.sslProcessed = "no_data";
-        }
-    }
+    // v2.0.27: Duplicate searchSteam removed.
+    // v2.0.26: Dedicated Linker for Bundle Items (Bypasses handleSteamApp ambiguity)
 
     // v2.0.25: Dedicated Bundle Scanner (Replacement)
     // v2.0.26: Dedicated Linker for Bundle Items (Bypasses handleSteamApp ambiguity)
@@ -1697,15 +1682,13 @@
             style.id = 'ssl-force-styles';
             style.innerHTML = `
                 .ssl-steam-overlay {
-                    justify-content: center !important;
-                    align-items: center !important;
                     bottom: 0 !important;
                     height: auto !important;
                     top: auto !important;
                     left: 0 !important;
                     width: 100% !important;
                     padding-bottom: 2px !important;
-                    display: flex !important;
+                    display: block !important;
                 }
                 .ssl-bundle-wishlisted-border {
                     position: absolute;
