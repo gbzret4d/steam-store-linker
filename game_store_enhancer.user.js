@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Game Store Enhancer (Dev)
 // @namespace    https://github.com/gbzret4d/game-store-enhancer
-// @version      2.0.22
+// @version      2.0.23
 // @description  Enhances Humble Bundle, Fanatical, DailyIndieGame, GOG, and IndieGala with Steam data (owned/wishlist status, reviews, age rating).
 // @author       gbzret4d
 // @match        https://www.humblebundle.com/*
@@ -149,21 +149,17 @@
                 // v1.47: Fallback Product Page
                 //{ container: '.store-product-page-content', title: 'h1', forceSimple: true }, // Legacy
                 { container: '.dev-cover-text-col', title: 'h1', forceSimple: true }, // Another potential container
-                // Bundle Tiers (Summary Grid)
-                { container: '.bundle-page-tier-item-col', title: '.bundle-page-tier-item-title' },
-                // v2.0.2: Bundle Page Slider (Carousel)
-                { container: '.bundle-slider-game-info', title: '.bundle-slider-game-info-title' },
-                // Homepage / Top Sellers (Generic Fallback)
-                { container: '.main-submenu-big-right-item-col', title: 'a[href^="/store/game/"]' },
-                // v1.59: Homepage "Top Sellers" List
-                { container: '.item-inner', title: '.item-title-span' },
+                // Bundles
+                { container: '.bundle-item-cont', title: '.bundle-item-title' }, // General Bundles
+                { container: '.bundle-page-tier-item-inner', title: '.bundle-page-tier-item-title' }, // Power Shock / Specific Bundles (Grid)
+                { container: '.bundle-slider-game-info', title: '.bundle-slider-game-info-title' }, // Bundle Carousel
+                { container: '.container-item', title: '.container-item-title' }, // Bundles Overview Lists
+
                 // Library
                 { container: 'li.profile-private-page-library-subitem', title: '.profile-private-page-library-subitem-text' },
-                { container: '.profile-private-page-library-product-item', title: '.profile-private-page-library-product-item-title' }, // New Guess
-                { container: 'div[class*="library-bundle-item"]', title: 'h3, h4, .title' }, // Generic
+                { container: '.profile-private-page-library-product-item', title: '.profile-private-page-library-product-item-title' },
+                { container: '.library-bundle-item', title: '.title' }, // Generic Library Bundle
 
-                // Bundle Page (Carousel)
-                { container: '.bundle-slider-game-info', title: '.bundle-slider-game-info-title' },
                 // Giveaways
                 { container: '.items-list-item', title: '.items-list-item-title a' },
                 { container: '.trading-card-header', title: '.trading-card-header-game' },
@@ -175,7 +171,7 @@
                 { container: '.products-col-inner', title: '.product-title' }
             ],
             getAppId: (element) => {
-                // 1. (Removed v1.61) Store URL IDs are internal IndieGala IDs, not Steam. 
+                // 1. (Removed v1.61) Store URL IDs are internal IndieGala IDs, not Steam.
                 // We MUST rely on Search or other methods for Store items.
 
                 // 2. Fallback: Try to get ID from Bundle Image URL
@@ -275,7 +271,7 @@
         .ssl-link {
             display: inline-block;
             margin-top: 5px;
-            margin-right: 10px; /* v1.34: Spacing for DIG */
+            margin-right: 10px;
             font-size: 11px;
             text-decoration: none;
             color: #c7d5e0;
@@ -286,23 +282,21 @@
             line-height: 1.2;
             box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
             z-index: 999;
-            z-index: 999;
             position: relative;
         }
 
         /* IndieGala Tweaks */
         .store-main-page-items-list-item-col .ssl-link {
-            display: block; /* Make it block level to sit nicely under title */
+            display: block;
             width: fit-content;
             margin-bottom: 5px;
         }
         
         .profile-private-page-library-subitem .ssl-link {
             margin-left: 10px;
-            float: right; /* Library list is horizontal, float it or flex it */
+            float: right;
         }
 
-        /* Giveaways & Trades & Showcase & Freebies */
         .items-list-item .ssl-link,
         .trades-list-card-contents .ssl-link,
         .showcase-main-list-item .ssl-link,
@@ -312,11 +306,12 @@
             width: fit-content;
         }
         
-        /* v1.34: Hide native Steam links on DailyIndieGame to avoid clutter */
-        a[href*="dailyindiegame.com"] a[href*="store.steampowered.com"], /* Sub-links inside container? */
+        /* Hide native links on DIG */
+        a[href*="dailyindiegame.com"] a[href*="store.steampowered.com"],
         tr[onmouseover] a[href*="store.steampowered.com"] {
              display: none !important; 
         }
+
         .ssl-link:hover { color: #fff; background: #2a475e; }
         .ssl-link span { margin-right: 4px; padding-right: 4px; border-right: 1px solid #3c3d3e; }
         .ssl-link span:last-child { border-right: none; margin-right: 0; padding-right: 0; }
@@ -324,170 +319,129 @@
         .ssl-owned { color: #a4d007; font-weight: bold; }
         .ssl-wishlist { color: #66c0f4; font-weight: bold; }
         .ssl-ignored { color: #d9534f; }
+
+        /* v2.0.23: Refined Visuals - Inset Box Shadows & Bottom Overlay */
         
-        .ssl-title-ignored {
-            border: 2px solid #d9534f !important;
+        /* Containers */
+        .ssl-container-owned {
+            box-shadow: inset 0 0 0 4px #5cb85c !important;
+            border: none !important;
+            background-color: rgba(76, 107, 34, 0.1) !important;
+            box-sizing: border-box !important;
+            z-index: 10;
+        }
+        
+        .ssl-container-wishlist {
+            box-shadow: inset 0 0 0 4px #5bc0de !important;
+            border: none !important;
+            background-color: rgba(59, 110, 140, 0.1) !important;
+            box-sizing: border-box !important;
             border-radius: 4px;
-            padding: 2px 6px !important;
-            background-color: rgba(217, 83, 79, 0.2);
-            box-shadow: 0 0 5px rgba(217, 83, 79, 0.4);
-            display: inline-block; /* Ensure box model works */
-            margin: 4px 0 !important; /* v2.0.12: Spacing fix */
+            z-index: 10;
         }
 
-        /* v2.0.14: Spacing fix for IndieGala Bundle Page - Apply border to inner container */
-        .ssl-container-ignored .bundle-page-tier-item-outer {
-            border: 4px solid #d9534f !important;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(217, 83, 79, 0.4);
+        .ssl-container-ignored {
+             box-shadow: inset 0 0 0 4px #d9534f !important;
+             border: none !important;
+             background-color: transparent !important; /* Fix for "grayed out" */
+        }
+
+        /* Overlay - Bottom Aligned */
+        .ssl-steam-overlay {
+            position: absolute;
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end; /* Align bottom */
+            align-items: center; /* Center horizontally */
+            padding-bottom: 2px;
+            z-index: 10;
         }
         
-        /* v2.0.14: Bundle Wishlist Indicator - Blue Border around entire card */
-        .ssl-bundle-wishlisted {
-            border: 4px solid #66c0f4 !important; /* Steam Blue */
-            border-radius: 20px !important;
-            box-shadow: 0 0 10px rgba(102, 192, 244, 0.6);
+        .ssl-overlay-text {
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 2px;
+            pointer-events: auto;
+            backdrop-filter: blur(2px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
 
-        /* v2.0.12: Bundle Wishlist Indicator */
+        /* Layout Fixes */
+        .showcase-main-list-item figure,
+        .main-list-item figure,
+        .bundle-page-tier-item-inner, /* Power Shock */
+        .container-item-inner {       /* Bundle Overview */
+             position: relative !important; 
+        }
+
+        /* DailyIndieGame Specifics handled via box-shadow now too, strictly */
+        ${currentConfig.name === 'DailyIndieGame' ? `
+            .ssl-container-owned, .ssl-container-wishlist, .ssl-container-ignored {
+                 border-bottom: 8px solid #1a1c1d !important;
+                 box-shadow: inset 0 0 0 4px currentColor, inset 0 0 20px rgba(0,0,0,0.2) !important;
+            }
+            body[bgcolor] table { border-collapse: separate !important; border-spacing: 0 5px !important; }
+            tr[onmouseover] td:last-child { display: none !important; }
+            .ssl-link-inline { margin-left: 10px; vertical-align: middle; display: inline-block !important; }
+        ` : ''}
+
+        /* Stats Panel */
+        #ssl-stats {
+            position: fixed;
+            top: 15%;
+            right: 0;
+            background: rgba(23, 26, 33, 0.95);
+            color: #c7d5e0;
+            padding: 12px;
+            border-radius: 8px 0 0 8px;
+            box-shadow: -2px 2px 10px rgba(0,0,0,0.5);
+            z-index: 99999;
+            font-size: 11px;
+            line-height: 1.4;
+            min-width: 140px;
+            border: 1px solid #3c3d3e;
+            border-right: none;
+            pointer-events: none;
+            transition: opacity 0.3s, right 0.3s;
+        }
+        #ssl-stats:hover {
+            opacity: 1;
+            right: 0;
+            pointer-events: auto;
+        }
+        
+        #ssl-stats h4 { 
+            margin: 0 0 8px 0; 
+            color: #66c0f4; 
+            font-size: 12px; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #3c3d3e; 
+            padding-bottom: 4px; 
+        }
+        .ssl-stat-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+        .ssl-stat-val { font-weight: bold; color: #fff; }
+        
+        /* Bundle Dot */
         .ssl-wishlist-dot {
             position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 12px;
-            height: 12px;
-            background-color: #66c0f4; /* Steam Blue */
-            border: 2px solid #ffffff;
+            top: 8px; right: 8px;
+            width: 12px; height: 12px;
+            background-color: #66c0f4;
+            border: 2px solid #fff;
             border-radius: 50%;
             z-index: 30;
             box-shadow: 0 0 4px rgba(0,0,0,0.5);
-            pointer-events: none;
-        }
-
-        .ssl-review-positive { color: #66C0F4; font-weight: bold; } /* Blue for positive */
-        .ssl-review-mixed { color: #a8926a; font-weight: bold; } /* Brown for mixed */
-        .ssl-review-negative { color: #c15755; font-weight: bold; } /* Red for negative */
-        
-        /* v1.34: Add "gap" between rows on DIG by using a border that matches the background color */
-        /* Note: We use border-bottom on the container to simulate a gap because standard margins don't work on TR/TD well without collapsing */
-        .ssl-container-owned {
-            border: 4px solid #a4d007 !important;
-            ${currentConfig.name === 'DailyIndieGame' ? 'border-bottom: 8px solid #1a1c1d !important;' : ''} /* Gap Simulation (DIG Only) */
-            background-color: rgba(76, 107, 34, 0.3) !important; 
-            box-shadow: inset 0 0 20px rgba(164, 208, 7, 0.4);
-            box-sizing: border-box !important;
-            transition: all 0.2s;
-            z-index: 10;
-        }
-
-        /* v1.37: Aggressive Table Fixing for DailyIndieGame */
-        body[bgcolor] table { /* Basic selector for DIG's main table structures */
-           border-collapse: separate !important; 
-           border-spacing: 0 5px !important;
-        }
-
-        /* v1.36: Hide the redundant "STEAM page link" column specifically in the game rows */
-        tr[onmouseover] td:last-child, 
-        tr[onmouseover] td:nth-last-child(2) { /* Sometimes there are hidden cols? hiding last visual one */
-             display: none !important; 
-        }
-
-        /* v1.36: Fix Badge Positioning inside table cells */
-        .ssl-link-inline { 
-            margin-left: 10px; 
-            vertical-align: middle; 
-            display: inline-block !important; /* Force visibility */
-        }
-        .ssl-container-owned:hover {
-            box-shadow: inset 0 0 30px rgba(164, 208, 7, 0.6) !important;
-        }
-        .ssl-container-wishlist {
-            border: 4px solid #66c0f4 !important;
-            ${currentConfig.name === 'DailyIndieGame' ? 'border-bottom: 8px solid #1a1c1d !important;' : ''}
-            background-color: rgba(59, 110, 140, 0.3) !important;
-            box-shadow: inset 0 0 20px rgba(102, 192, 244, 0.4);
-            box-sizing: border-box !important;
-            border-radius: 4px;
-            z-index: 10;
-        }
-        .ssl-container-ignored {
-            border: 4px solid #d9534f !important;
-            ${currentConfig.name === 'DailyIndieGame' ? 'border-bottom: 8px solid #1a1c1d !important;' : ''}
-            background-color: rgba(90, 90, 90, 0.3) !important;
-            box-shadow: inset 0 0 10px rgba(217, 83, 79, 0.4);
-        }
-        .showcase-main-list-item figure,
-        .main-list-item figure { 
-             position: relative !important; 
-        }
-        .ssl-steam-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 24px; /* Fixed height for clean look */
-            background: rgba(23, 26, 33, 0.85); /* Steam Dark Blue/Black */
-            color: #c7d5e0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            cursor: pointer;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 11px;
-            backdrop-filter: blur(2px);
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .ssl-steam-overlay:hover {
-            background: rgba(42, 71, 94, 0.95);
-            color: #ffffff;
-            text-decoration: none;
-        }
-        
-        .ssl-steam-overlay img { margin-right: 6px; }
-
-        /* v2.0.18: Stats Panel (Restored) */
-        #ssl-stats {
-            position: fixed;
-            top: 150px; /* Aligned with typical sidebar */
-            right: 20px;
-            background: rgba(23, 26, 33, 0.95);
-            color: #c7d5e0;
-            padding: 10px;
-            border-radius: 4px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            z-index: 99999; /* Ensure it's on top of everything */
-            font-size: 12px;
-            line-height: 1.4;
-            min-width: 120px;
-            border: 1px solid #3c3d3e;
-            pointer-events: none; /* Let clicks pass through if needed, or consistent with user interaction? */
-        }
-        /* v2.0.18: Interaction allowed for panel? User didn't specify. Assuming info display only. */
-        #ssl-stats.interactive { pointer-events: auto; }
-        
-        #ssl-stats h4 { 
-            margin: 0 0 5px 0; 
-            color: #66c0f4; 
-            font-size: 13px; 
-            border-bottom: 1px solid #3c3d3e; 
-            padding-bottom: 3px; 
-        }
-        #ssl-stats div { display: flex; justify-content: space-between; }
-        #ssl-stats .val { font-weight: bold; color: #fff; margin-left: 10px; }
-        
-        /* v2.0.18: Fix Link Clickability on IndieGala */
-        .ssl-steam-overlay {
-            z-index: 1000 !important; /* Force on top of figure/borders */
-            cursor: pointer !important;
-            pointer-events: auto !important;
-        }
-        
-        /* v2.0.18: Fix spacing of Wishlisted items */
-        .ssl-bundle-wishlisted {
-             margin: 2px; /* Ensure 4px gap (2+2) between adjacent items */
         }
     `;
     GM_addStyle(css);
